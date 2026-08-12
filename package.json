@@ -1,0 +1,297 @@
+{
+  "name": "vscode-live-wallpaper",
+  "displayName": "Live Wallpaper",
+  "description": "Use Wallpaper Engine workshop items or custom image, video, and web backgrounds in VS Code.",
+  "publisher": "vakesamahere",
+  "icon": "assets/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MakotoArai-CN/vscode-live-wallpaper.git"
+  },
+  "version": "0.0.6",
+  "packageManager": "bun@1.3.14",
+  "engines": {
+    "vscode": "^1.106.1"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vscode-wallpaper-engine.refreshWallpaper",
+        "title": "Refresh Wallpaper: 刷新壁纸"
+      },
+      {
+        "command": "vscode-wallpaper-engine.setWallpaper",
+        "title": "Set Wallpaper: 设置壁纸"
+      },
+      {
+        "command": "vscode-wallpaper-engine.openInBrowser",
+        "title": "Open Wallpaper in Browser: 在浏览器打开"
+      },
+      {
+        "command": "vscode-wallpaper-engine.uninstallWallpaper",
+        "title": "Uninstall Wallpaper Engine: 卸载插件"
+      },
+      {
+        "command": "vscode-wallpaper-engine.openSettings",
+        "title": "Open Wallpaper Settings: 打开壁纸设置"
+      },
+      {
+        "command": "vscode-wallpaper-engine.detectWorkshopPath",
+        "title": "Detect Wallpaper Engine Directory: 自动检测壁纸目录"
+      },
+      {
+        "command": "vscode-wallpaper-engine.addCustomWallpaper",
+        "title": "Add Custom Wallpaper: 添加自定义背景"
+      }
+    ],
+    "configuration": {
+      "title": "Live Wallpaper",
+      "properties": {
+        "vscode-wallpaper-engine.workshopPath": {
+          "type": "string",
+          "default": "",
+          "description": "Wallpaper Engine 创意工坊目录路径。留空时插件会尝试自动检测 Steam 库中的 workshop/content/431960。"
+        },
+        "vscode-wallpaper-engine.backgroundOpacity": {
+          "type": "number",
+          "default": 0.1,
+          "description": "代码编辑器的背景透明度 (0 - 1)"
+        },
+        "vscode-wallpaper-engine.serverPort": {
+          "type": "number",
+          "default": 23333,
+          "description": "网页壁纸服务器端口"
+        },
+        "vscode-wallpaper-engine.wallpaperId": {
+          "type": "string",
+          "default": "",
+          "description": "当前选中的壁纸 ID。Wallpaper Engine 使用文件夹 ID，自定义背景使用 custom: 前缀。"
+        },
+        "vscode-wallpaper-engine.customWallpaperPaths": {
+          "type": "array",
+          "default": [],
+          "description": "自定义背景路径列表。支持本地图片、视频、HTML 文件，或包含 index.html / 媒体文件的目录。",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vscode-wallpaper-engine.wallpaperFit": {
+          "type": "string",
+          "default": "contain",
+          "enum": [
+            "contain",
+            "cover",
+            "fill"
+          ],
+          "enumDescriptions": [
+            "保持比例完整显示，不裁切。",
+            "保持比例铺满窗口，可能裁切边缘。",
+            "拉伸填满窗口，不保持比例。"
+          ],
+          "description": "图片和视频壁纸的显示方式。"
+        },
+        "vscode-wallpaper-engine.audioSource": {
+          "type": "string",
+          "default": "system",
+          "enum": [
+            "off",
+            "simulate",
+            "mic",
+            "system"
+          ],
+          "enumDescriptions": [
+            "关闭音频响应。",
+            "模拟频谱（无需权限，非真实音频）。",
+            "麦克风输入（戴耳机时采不到外放，首次会请求授权）。",
+            "系统外放（真实响应正在播放的音乐/视频，Windows 通过 WASAPI loopback 采集扬声器输出，戴耳机也有效；不可用时自动回退到模拟频谱）。"
+          ],
+          "description": "网页壁纸音频响应来源。对应 Wallpaper Engine 的 wallpaperRegisterAudioListener API。"
+        },
+        "vscode-wallpaper-engine.interactionEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "允许网页壁纸响应鼠标交互（移动/点击/滚轮）。事件由编辑器区域捕获后转发给壁纸，编辑器本身的点击与输入不受影响。"
+        },
+        "vscode-wallpaper-engine.micEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "在壁纸设置面板的音频来源里显示“麦克风”选项。默认关闭（戴耳机时麦克风采不到外放，推荐用系统外放/loopback）。"
+        },
+        "vscode-wallpaper-engine.showUnsupportedWallpapers": {
+          "type": "boolean",
+          "default": false,
+          "description": "在选择列表中显示无法完整兼容的 Wallpaper Engine 壁纸。开启后 scene/pkg 等项目只会以预览图兜底显示，不代表完整渲染。"
+        },
+        "vscode-wallpaper-engine.resizeDelay": {
+          "type": "number",
+          "default": 500,
+          "description": "窗口大小改变后刷新壁纸的延迟时间 (毫秒)"
+        },
+        "vscode-wallpaper-engine.startupCheckInterval": {
+          "type": "number",
+          "default": 300,
+          "description": "启动时检查壁纸服务器状态的间隔时间 (毫秒)"
+        },
+        "vscode-wallpaper-engine.customJs": {
+          "type": "string",
+          "default": "",
+          "description": "自定义注入的 JavaScript 代码 (将在壁纸加载后执行)",
+          "editPresentation": "multilineText"
+        },
+        "vscode-wallpaper-engine.customCss": {
+          "type": "string",
+          "default": "",
+          "description": "自定义注入的 CSS 代码",
+          "editPresentation": "multilineText"
+        },
+        "vscode-wallpaper-engine.glassEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用下拉菜单、命令面板、补全框、悬浮提示等浮层的玻璃模糊效果。"
+        },
+        "vscode-wallpaper-engine.glassPreset": {
+          "type": "string",
+          "default": "liquid",
+          "enum": [
+            "subtle",
+            "liquid",
+            "solid"
+          ],
+          "enumDescriptions": [
+            "轻量磨砂，背景更稳定。",
+            "较强高斯模糊和饱和度，接近液态玻璃观感。",
+            "更高不透明度，优先保证菜单可读性。"
+          ],
+          "description": "浮层玻璃效果预设。"
+        },
+        "vscode-wallpaper-engine.glassTint": {
+          "type": "string",
+          "default": "#111827",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "玻璃浮层底色，Hex 格式。"
+        },
+        "vscode-wallpaper-engine.glassOpacity": {
+          "type": "number",
+          "default": 0.52,
+          "minimum": 0.2,
+          "maximum": 1,
+          "description": "玻璃浮层底色不透明度。值越高，菜单越不容易和代码重叠。"
+        },
+        "vscode-wallpaper-engine.glassBlur": {
+          "type": "number",
+          "default": 28,
+          "minimum": 0,
+          "maximum": 60,
+          "description": "玻璃浮层背景高斯模糊半径，单位 px。"
+        },
+        "vscode-wallpaper-engine.glassSaturation": {
+          "type": "number",
+          "default": 1.85,
+          "minimum": 1,
+          "maximum": 2.5,
+          "description": "玻璃浮层背景饱和度增强倍数。"
+        },
+        "vscode-wallpaper-engine.glassBorderOpacity": {
+          "type": "number",
+          "default": 0.46,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "玻璃浮层边框和高光强度。"
+        },
+        "vscode-wallpaper-engine.glassShadowOpacity": {
+          "type": "number",
+          "default": 0.36,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "玻璃浮层阴影强度。"
+        },
+        "vscode-wallpaper-engine.transparencyEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用 UI 透明化"
+        },
+        "vscode-wallpaper-engine.transparencyBaseColor": {
+          "type": "string",
+          "default": "",
+          "description": "透明化时的基底颜色 (Hex 格式, 例如 #1e1e1e)。留空则根据主题自动选择黑色或白色。"
+        },
+        "vscode-wallpaper-engine.transparencyRules": {
+          "type": "object",
+          "default": {
+            "editor.background": 0,
+            "editorGroup.emptyBackground": 0,
+            "editorGroupHeader.tabsBackground": 0,
+            "sideBar.background": 0,
+            "panel.background": 0,
+            "terminal.background": 0
+          },
+          "description": "UI 元素透明度规则 (Key: UI Element, Value: Opacity 0-1)",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "bun run check-types && bun run lint && bun ./esbuild.js",
+    "watch": "bun run --parallel watch:tsc watch:esbuild",
+    "watch:esbuild": "bun ./esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "bun run check-types && bun run lint && bun ./esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "bun run compile-tests && bun run compile && bun run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "output": "bun run vsce-package && bun ./scripts/move-vsix.js",
+    "vsce-package": "bun run package && vsce package --target win32-x64 --allow-star-activation"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.106.1",
+    "@types/ws": "^8.18.1",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.9.1",
+    "esbuild": "^0.27.0",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3"
+  },
+  "files": [
+    "dist/extension.js",
+    "media",
+    "assets",
+    "package.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "node_modules/audify/index.js",
+    "node_modules/audify/package.json",
+    "node_modules/audify/build/Release/audify.node",
+    "node_modules/audify/build/Release/rtaudio.dll",
+    "node_modules/audify/build/Release/opus.dll",
+    "node_modules/bindings/**",
+    "node_modules/file-uri-to-path/**"
+  ],
+  "dependencies": {
+    "audify": "^1.10.1",
+    "sudo-prompt": "^9.2.1",
+    "ws": "^8.18.3"
+  },
+  "trustedDependencies": [
+    "audify"
+  ]
+}

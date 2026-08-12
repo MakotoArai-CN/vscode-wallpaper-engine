@@ -1,0 +1,473 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: dark;
+  --surface: rgba(30, 34, 42, 0.76);
+  --surface-2: rgba(36, 40, 48, 0.68);
+  --border: color-mix(in srgb, var(--vscode-panel-border) 70%, transparent);
+  --muted: var(--vscode-descriptionForeground);
+  --accent: var(--vscode-button-background);
+  --danger: #9f3a38;
+  --radius: 8px;
+  --page-glass-border: color-mix(in srgb, var(--vscode-editor-foreground) 24%, transparent);
+  --page-glass-highlight: color-mix(in srgb, var(--vscode-editor-foreground) 18%, transparent);
+  --page-glass-shadow: rgba(0, 0, 0, 0.34);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--vscode-editor-background);
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+#vwe-liquid-glass-svg {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  background: rgba(30, 34, 42, 0.82);
+  background: color-mix(in srgb, var(--vscode-editor-background) 82%, transparent);
+  border-bottom: 1px solid var(--page-glass-border);
+  -webkit-backdrop-filter: url(#vwe-liquid-glass-filter) blur(20px) contrast(1.12) brightness(1.04) saturate(1.45);
+  backdrop-filter: url(#vwe-liquid-glass-filter) blur(20px) contrast(1.12) brightness(1.04) saturate(1.45);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18), inset 0 1px 0 var(--page-glass-highlight);
+}
+
+h1,
+h2,
+p,
+dl {
+  margin: 0;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 650;
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+p,
+.subtle {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.25fr) minmax(320px, 0.85fr);
+  gap: 16px;
+  padding: 18px 22px 28px;
+}
+
+.panel {
+  padding: 16px;
+  background: rgba(30, 34, 42, 0.76);
+  background: color-mix(in srgb, var(--vscode-editor-background) 76%, transparent);
+  border: 1px solid var(--page-glass-border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 44px var(--page-glass-shadow), inset 0 1px 0 var(--page-glass-highlight);
+  -webkit-backdrop-filter: url(#vwe-liquid-glass-filter) blur(22px) contrast(1.12) brightness(1.04) saturate(1.5);
+  backdrop-filter: url(#vwe-liquid-glass-filter) blur(22px) contrast(1.12) brightness(1.04) saturate(1.5);
+}
+
+.glass-panel {
+  grid-row: span 2;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.panel-head.compact {
+  align-items: center;
+}
+
+.actions,
+.button-row,
+.inline-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+button {
+  min-height: 30px;
+  padding: 6px 11px;
+  color: var(--vscode-button-foreground);
+  background: rgba(56, 60, 70, 0.78);
+  background: color-mix(in srgb, var(--vscode-button-secondaryBackground) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--vscode-button-secondaryBackground) 62%, #fff 38%);
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  -webkit-backdrop-filter: url(#vwe-liquid-glass-filter) blur(12px) contrast(1.08) brightness(1.03) saturate(1.35);
+  backdrop-filter: url(#vwe-liquid-glass-filter) blur(12px) contrast(1.08) brightness(1.03) saturate(1.35);
+}
+
+button:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+button.primary {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--vscode-button-background);
+  background-color: var(--vscode-button-background);
+  border-color: var(--vscode-button-background);
+}
+
+button.danger {
+  background: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 76%, #fff 24%);
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 28px;
+  color: var(--vscode-input-foreground);
+  background: rgba(24, 28, 36, 0.82);
+  background: color-mix(in srgb, var(--vscode-input-background) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--vscode-input-border) 72%, #fff 18%);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: inherit;
+}
+
+input[type="range"] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+input[type="color"] {
+  width: 52px;
+  padding: 2px;
+}
+
+.glass-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 0.85fr);
+  gap: 16px;
+}
+
+.preview-surface {
+  position: relative;
+  min-height: 360px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(36, 40, 48, 0.68);
+  background: color-mix(in srgb, var(--vscode-sideBar-background) 68%, transparent);
+  box-shadow: inset 0 1px 0 var(--page-glass-highlight);
+}
+
+.preview-code {
+  position: absolute;
+  inset: 22px;
+  color: color-mix(in srgb, var(--vscode-editor-foreground) 84%, transparent);
+  font-family: var(--vscode-editor-font-family), monospace;
+  line-height: 1.8;
+  opacity: 0.86;
+}
+
+.preview-code .kw {
+  color: var(--vscode-symbolIcon-functionForeground);
+}
+
+.preview-menu {
+  position: absolute;
+  right: 22px;
+  bottom: 28px;
+  width: min(260px, calc(100% - 44px));
+  padding: 9px;
+  border-radius: var(--radius);
+  background: var(--preview-glass-bg, rgba(17, 24, 39, 0.52));
+  border: 1px solid var(--preview-glass-border, rgba(255, 255, 255, 0.34));
+  box-shadow: 0 20px 56px var(--preview-glass-shadow, rgba(0, 0, 0, 0.36)), inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: url(#vwe-liquid-glass-filter) blur(var(--preview-glass-blur, 28px)) contrast(1.14) brightness(1.04) saturate(var(--preview-glass-saturation, 1.85));
+  backdrop-filter: url(#vwe-liquid-glass-filter) blur(var(--preview-glass-blur, 28px)) contrast(1.14) brightness(1.04) saturate(var(--preview-glass-saturation, 1.85));
+}
+
+.preview-menu-title {
+  padding: 4px 7px 8px;
+  color: color-mix(in srgb, var(--vscode-editor-foreground) 70%, transparent);
+  font-size: 12px;
+}
+
+.preview-menu-row {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 5px;
+}
+
+.preview-menu-row.selected {
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.controls {
+  display: grid;
+  gap: 11px;
+  align-content: start;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 3px;
+  background: rgba(36, 40, 48, 0.68);
+  background: color-mix(in srgb, var(--vscode-sideBar-background) 68%, transparent);
+  border: 1px solid var(--page-glass-border);
+  border-radius: 7px;
+  -webkit-backdrop-filter: url(#vwe-liquid-glass-filter) blur(14px) contrast(1.08) brightness(1.03) saturate(1.35);
+  backdrop-filter: url(#vwe-liquid-glass-filter) blur(14px) contrast(1.08) brightness(1.03) saturate(1.35);
+}
+
+.segmented button {
+  border: 0;
+  background: transparent;
+}
+
+.segmented button.active {
+  background: var(--vscode-button-background);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.field > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+output {
+  color: var(--vscode-editor-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.switch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.switch-row input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.status-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-pills span {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.status-pills strong {
+  color: var(--vscode-editor-foreground);
+}
+
+.library-actions {
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.option-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 10px;
+  background: rgba(36, 40, 48, 0.58);
+  background: color-mix(in srgb, var(--vscode-sideBar-background) 58%, transparent);
+  border: 1px solid var(--page-glass-border);
+  border-radius: 6px;
+  -webkit-backdrop-filter: url(#vwe-liquid-glass-filter) blur(14px) contrast(1.08) brightness(1.03) saturate(1.35);
+  backdrop-filter: url(#vwe-liquid-glass-filter) blur(14px) contrast(1.08) brightness(1.03) saturate(1.35);
+}
+
+.option-row input {
+  width: 16px;
+  min-height: 16px;
+  margin: 2px 0 0;
+}
+
+.option-row strong {
+  display: block;
+  color: var(--vscode-editor-foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.option-row small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.info-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.info-list div {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 10px;
+}
+
+.info-list dt {
+  color: var(--muted);
+}
+
+.info-list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.candidate-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.candidate-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(36, 40, 48, 0.68);
+  background: color-mix(in srgb, var(--vscode-sideBar-background) 68%, transparent);
+  border: 1px solid var(--page-glass-border);
+  border-radius: 6px;
+  -webkit-backdrop-filter: url(#vwe-liquid-glass-filter) blur(14px) contrast(1.08) brightness(1.03) saturate(1.35);
+  backdrop-filter: url(#vwe-liquid-glass-filter) blur(14px) contrast(1.08) brightness(1.03) saturate(1.35);
+}
+
+.candidate-row span,
+.candidate-row strong {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.candidate-row code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-editor-font-family), monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rule-list,
+.props-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rule-row,
+.control-item {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(120px, 0.9fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.rule-row label,
+.control-item label {
+  color: var(--vscode-editor-foreground);
+  overflow-wrap: anywhere;
+}
+
+.rule-controls {
+  display: grid;
+  grid-template-columns: 18px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+}
+
+.rule-controls input[type="checkbox"] {
+  width: 16px;
+  min-height: 16px;
+}
+
+.search-box {
+  margin-top: 14px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 920px) {
+  .layout,
+  .glass-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar,
+  .panel-head,
+  .inline-fields {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+}

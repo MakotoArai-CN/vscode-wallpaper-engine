@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src {{cspSource}} 'unsafe-inline'; connect-src http://127.0.0.1:* ws://127.0.0.1:*; img-src data: http://127.0.0.1:*;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallpaper Settings</title>
+    <link href="{{styleUri}}" rel="stylesheet" />
+</head>
+<body>
+    <svg id="vwe-liquid-glass-svg" xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true">
+        <defs>
+            <filter id="vwe-liquid-glass-filter" color-interpolation-filters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="1" seed="7" result="noise" />
+                <feGaussianBlur in="noise" stdDeviation="1.2" result="map" />
+                <feDisplacementMap in="SourceGraphic" in2="map" scale="12" xChannelSelector="R" yChannelSelector="G" result="displaced" />
+                <feColorMatrix in="displaced" type="saturate" values="1.18" />
+            </filter>
+        </defs>
+    </svg>
+
+    <header class="topbar">
+        <div>
+            <h1>Wallpaper Settings</h1>
+            <div class="subtle">Runtime controls for wallpaper, transparency, and glass surfaces.</div>
+        </div>
+        <div class="actions">
+            <button id="btn-refresh">Refresh</button>
+            <button id="btn-switch">Switch</button>
+            <button id="btn-add-custom">Add Custom</button>
+            <button id="btn-browser">Browser</button>
+            <button id="btn-folder">Folder</button>
+        </div>
+    </header>
+
+    <main class="layout">
+        <section class="panel glass-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Glass Effect</h2>
+                    <p>Blurred floating menus for Quick Pick, context menus, suggestions, hovers, and dialogs.</p>
+                </div>
+                <label class="switch-row">
+                    <span>Enabled</span>
+                    <input type="checkbox" id="glass-enabled">
+                </label>
+            </div>
+
+            <div class="glass-grid">
+                <div class="preview-surface" id="glass-preview">
+                    <div class="preview-code">
+                        <div><span class="kw">function</span> applyWallpaper(config) {</div>
+                        <div>&nbsp;&nbsp;<span class="kw">return</span> config.glass.enabled;</div>
+                        <div>}</div>
+                    </div>
+                    <div class="preview-menu" id="glass-preview-menu">
+                        <div class="preview-menu-title">Command Palette</div>
+                        <div class="preview-menu-row selected">Wallpaper: Refresh</div>
+                        <div class="preview-menu-row">Wallpaper: Switch</div>
+                        <div class="preview-menu-row">Open Settings</div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <div class="segmented" id="glass-presets">
+                        <button data-preset="subtle">Subtle</button>
+                        <button data-preset="liquid">Liquid</button>
+                        <button data-preset="solid">Solid</button>
+                    </div>
+
+                    <label class="field">
+                        <span>Tint</span>
+                        <input type="color" id="glass-tint">
+                    </label>
+
+                    <label class="field">
+                        <span>Opacity <output id="glass-opacity-value"></output></span>
+                        <input type="range" id="glass-opacity" min="0.2" max="1" step="0.01">
+                    </label>
+
+                    <label class="field">
+                        <span>Blur <output id="glass-blur-value"></output></span>
+                        <input type="range" id="glass-blur" min="0" max="60" step="1">
+                    </label>
+
+                    <label class="field">
+                        <span>Saturation <output id="glass-saturation-value"></output></span>
+                        <input type="range" id="glass-saturation" min="1" max="2.5" step="0.01">
+                    </label>
+
+                    <label class="field">
+                        <span>Border <output id="glass-border-value"></output></span>
+                        <input type="range" id="glass-border-opacity" min="0" max="1" step="0.01">
+                    </label>
+
+                    <label class="field">
+                        <span>Shadow <output id="glass-shadow-value"></output></span>
+                        <input type="range" id="glass-shadow-opacity" min="0" max="1" step="0.01">
+                    </label>
+
+                    <button id="btn-save-glass" class="primary">Apply Glass</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel status-panel">
+            <div class="panel-head compact">
+                <h2>Status</h2>
+                <div class="status-pills">
+                    <span>HTTP <strong id="http-status">Unknown</strong></span>
+                    <span>WS <strong id="ws-status">Unknown</strong></span>
+                </div>
+            </div>
+            <div class="button-row">
+                <button id="btn-test-http">Test HTTP</button>
+                <button id="btn-test-ws">Test WS</button>
+                <button id="btn-stop-server" class="danger">Stop Server</button>
+            </div>
+            <dl class="info-list">
+                <div><dt>Name</dt><dd id="info-name">{{infoName}}</dd></div>
+                <div><dt>Type</dt><dd id="info-type">{{infoType}}</dd></div>
+                <div><dt>Entry</dt><dd id="info-entry">{{infoEntry}}</dd></div>
+                <div><dt>Path</dt><dd id="info-path">{{infoPath}}</dd></div>
+            </dl>
+        </section>
+
+        <section class="panel library-panel">
+            <div class="panel-head compact">
+                <h2>Wallpaper Library</h2>
+                <button id="btn-detect-library">Auto Detect</button>
+            </div>
+            <dl class="info-list">
+                <div><dt>Status</dt><dd id="library-status">Ready</dd></div>
+                <div><dt>Path</dt><dd id="library-path">{{workshopPath}}</dd></div>
+                <div><dt>Custom</dt><dd id="custom-count">{{customWallpaperCount}} configured</dd></div>
+            </dl>
+            <label class="option-row">
+                <input type="checkbox" id="chk-show-unsupported">
+                <span>
+                    <strong>Show preview-only wallpapers</strong>
+                    <small>Scene/pkg items are hidden by default because they cannot be fully rendered here.</small>
+                </span>
+            </label>
+            <div class="button-row library-actions">
+                <button id="btn-add-custom-library">Add Custom Background</button>
+                <button id="btn-select-background">Select Background</button>
+            </div>
+            <div id="library-candidates" class="candidate-list"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Transparency</h2>
+                    <p>Choose which VS Code surfaces stay transparent above the wallpaper.</p>
+                </div>
+                <label class="switch-row">
+                    <span>Enabled</span>
+                    <input type="checkbox" id="chk-transparency-enabled">
+                </label>
+            </div>
+
+            <div class="inline-fields">
+                <label class="field">
+                    <span>Base Color</span>
+                    <input type="text" id="input-base-color" placeholder="Auto or #1E1E1E" value="{{transparencyBaseColor}}">
+                </label>
+                <button id="btn-save-base-color">Set Color</button>
+            </div>
+
+            <div id="transparencyPanel" class="rule-list"></div>
+            <button id="btn-save-transparency" class="primary">Apply Transparency</button>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head compact">
+                <h2>Advanced</h2>
+                <button id="btn-edit-css">Edit Custom CSS</button>
+            </div>
+            <input type="hidden" id="input-custom-css" value="{{customCss}}">
+            <button id="btn-save-css">Save Runtime CSS</button>
+
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search wallpaper properties">
+            </div>
+            <div id="generalPanel" class="props-panel"></div>
+            <div id="propsPanel" class="props-panel">Loading...</div>
+        </section>
+    </main>
+
+    <script>
+        window.transparencyKeys = {{transparencyKeys}};
+        window.transparencyRules = {{transparencyRules}};
+        window.transparencyEnabled = {{transparencyEnabled}};
+        window.glassConfig = {{glassConfig}};
+        window.showUnsupportedWallpapers = {{showUnsupportedWallpapers}};
+        window.audioSource = {{audioSource}};
+        window.interactionEnabled = {{interactionEnabled}};
+        window.micEnabled = {{micEnabled}};
+    </script>
+    <script id="settings-script" src="{{scriptUri}}" data-server-root="http://127.0.0.1:{{serverPort}}"></script>
+</body>
+</html>
