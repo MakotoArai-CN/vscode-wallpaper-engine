@@ -1,126 +1,158 @@
-# Live Wallpaper
+<div align="center">
+  <img src="assets/icon.png" width="96" alt="Live Wallpaper 图标">
+  <h1>Live Wallpaper</h1>
+  <p>让 Wallpaper Engine 与本地动态背景自然融入 VS Code。</p>
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/vakesamahere.vscode-live-wallpaper)](https://marketplace.visualstudio.com/items?itemName=vakesamahere.vscode-live-wallpaper)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/vakesamahere.vscode-live-wallpaper)](https://marketplace.visualstudio.com/items?itemName=vakesamahere.vscode-live-wallpaper)
+  [![Build](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/actions/workflows/package.yml/badge.svg)](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/actions/workflows/package.yml)
+  [![Release](https://img.shields.io/github/v/release/MakotoArai-CN/vscode-wallpaper-engine?display_name=tag&sort=semver)](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/releases)
+  [![License](https://img.shields.io/github/license/MakotoArai-CN/vscode-wallpaper-engine)](LICENSE)
+  [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun&logoColor=14151a)](https://bun.sh/)
+</div>
 
-Live Wallpaper 可以把 Wallpaper Engine 创意工坊壁纸和本地自定义背景带入 VS Code。它支持图片、视频、网页背景，提供可调节的编辑器透明化，并带有液态玻璃风格的设置面板，用于调整模糊、透明度和浮层可读性。
+<div align="center">
+  <img src="assets/preview.gif" width="820" alt="Live Wallpaper 在 VS Code 中的效果预览">
+</div>
 
-<img src="assets/preview.gif" width="600" alt="Live Wallpaper 预览">
+Live Wallpaper 可以在 VS Code 中使用 Wallpaper Engine 创意工坊项目，以及本地图片、视频和网页背景。它不仅负责显示壁纸，还提供界面透明化、玻璃浮层、音频响应和鼠标交互转发，让动态网页壁纸更接近在 Wallpaper Engine 中的体验。
 
-## 功能
+> [!IMPORTANT]
+> 扩展需要修改 VS Code 安装目录中的 workbench 文件。VS Code 更新可能覆盖这些修改，更新后重新执行一次 **Set Wallpaper: 设置壁纸** 即可。
 
-- 自动检测 Steam 中的 Wallpaper Engine 创意工坊目录。
-- 支持本地图片、视频、HTML 文件，或包含 `index.html` / 媒体文件的目录。
-- 支持命令面板、补全框、悬浮提示、弹窗和设置页的液态玻璃效果。
-- 支持编辑器、侧边栏、终端、面板等 VS Code 区域的透明化规则。
-- 图片和视频支持 `contain`、`cover`、`fill` 三种显示方式。
-- 设置面板提供服务器状态检查、自动检测目录、添加自定义背景、透明化控制和玻璃效果预览。
-- 使用 Bun 进行依赖管理、测试和打包。
+## 功能亮点
 
-## 兼容性
-
-本扩展运行在 VS Code 的 Electron / workbench 环境里，因此只能直接渲染浏览器友好的壁纸资源。
-
-扩展声明支持 VS Code `1.106.1` 及以上版本。注入逻辑会优先使用已知 workbench 路径，并提供递归文件发现兜底，以兼容旧版和 1.123+ 的安装目录差异。
-
-默认支持：
-
-- Wallpaper Engine `image` 项目中的常见图片文件。
-- Wallpaper Engine `video` 项目中的常见视频文件。
-- Wallpaper Engine `web` 项目中的 HTML 入口文件。
-- 本地自定义图片、视频和 HTML 背景。
-
-默认隐藏：
-
-- Wallpaper Engine `scene` / `scene.pkg` 项目。
-- 入口文件依赖 Wallpaper Engine 原生 scene 渲染器的项目。
-
-如果需要在选择列表里看到这些不完整兼容的项目，可以在设置面板开启 **Show preview-only wallpapers**，或手动设置：
-
-```json
-"vscode-wallpaper-engine.showUnsupportedWallpapers": true
-```
-
-开启后，这些项目只会以 `preview.jpg` / `preview.png` 等作为壁纸，并会标记为 `preview only`。这不代表已经完整渲染 `scene.pkg`。
+| 壁纸与交互 | 外观与体验 | 管理与兼容 |
+| --- | --- | --- |
+| Wallpaper Engine 图片、视频和 Web 项目 | 编辑器、侧边栏、终端和面板透明化 | 自动发现 Steam 库与创意工坊目录 |
+| 本地图片、视频、HTML 文件及目录 | `subtle`、`liquid`、`solid` 玻璃预设 | 设置面板集中管理壁纸与状态 |
+| 系统音频、麦克风或模拟频谱响应 | `contain`、`cover`、`fill` 显示模式 | 大型壁纸库异步扫描与兼容性过滤 |
+| 网页壁纸鼠标移动、点击和滚轮转发 | 自定义 CSS 与 JavaScript 注入 | VS Code workbench 路径自动适配 |
 
 ## 安装
 
-可以从 VS Code 插件市场安装。也可以在本地构建 VSIX：
+### 从 GitHub Actions 下载
+
+每次推送都会构建三个 x64 平台产物。打开最新一次 [Actions 构建](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/actions/workflows/package.yml)，在 **Artifacts** 中选择当前系统：
+
+| 系统 | Artifact | VS Code target |
+| --- | --- | --- |
+| Windows x64 | `vsix-win32-x64` | `win32-x64` |
+| Linux x64 | `vsix-linux-x64` | `linux-x64` |
+| macOS Intel | `vsix-darwin-x64` | `darwin-x64` |
+
+下载并解压 Artifact，然后在 VS Code 中运行 **Extensions: Install from VSIX...**，选择其中的 `.vsix` 文件。
+
+带有 `v*` 标签的构建会把三个平台的 VSIX 一并发布到 [Releases](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/releases)。
+
+### 本地构建
+
+需要先安装 [Bun](https://bun.sh/)：
 
 ```powershell
-bun install
+bun install --frozen-lockfile
 bun run output
 ```
 
-打包产物会生成到：
+当前平台的 VSIX 会移动到 `artifacts/` 目录。
 
-```text
-artifacts/vscode-live-wallpaper-0.0.6.vsix
-```
+## 快速上手
 
-在 VS Code 中执行 **Extensions: Install from VSIX** 后选择该文件即可安装。
+1. 打开命令面板，运行 **Open Wallpaper Settings: 打开壁纸设置**。
+2. 点击 **Auto Detect** 查找 Wallpaper Engine 创意工坊，或手动填写创意工坊目录。
+3. 运行 **Set Wallpaper: 设置壁纸** 并选择一个背景。
+4. 按提示重新加载 VS Code 窗口，使 workbench 修改生效。
 
-## 使用
+也可以通过 **Add Custom Background** 添加本地图片、视频、HTML 文件，或包含 `index.html` / 媒体文件的目录。
 
-1. 执行 **Open Wallpaper Settings: 打开壁纸设置**。
-2. 使用 **Auto Detect** 自动检测 Wallpaper Engine 创意工坊目录，或手动设置 `vscode-wallpaper-engine.workshopPath`。
-3. 使用 **Add Custom Background** 添加本地图片、视频或 HTML 背景。
-4. 执行 **Set Wallpaper: 设置壁纸**，选择一个可用背景。
-5. 首次注入或更新补丁后，按提示选择 **Reload Window**。
-
-常见创意工坊路径：
+常见的 Windows 创意工坊路径：
 
 ```text
 D:/Steam/steamapps/workshop/content/431960
 ```
 
-## 设置项
+## 壁纸兼容性
 
-- `vscode-wallpaper-engine.workshopPath`：Wallpaper Engine 创意工坊目录。留空时会自动检测 Steam 库。
-- `vscode-wallpaper-engine.customWallpaperPaths`：本地自定义背景文件或目录。
-- `vscode-wallpaper-engine.wallpaperId`：当前选中的壁纸 ID。
-- `vscode-wallpaper-engine.wallpaperFit`：图片和视频显示方式，默认 `contain`。
-- `vscode-wallpaper-engine.showUnsupportedWallpapers`：是否显示 preview-only 的不完整兼容 Wallpaper Engine 项目。
-- `vscode-wallpaper-engine.backgroundOpacity`：编辑器背景透明度。
-- `vscode-wallpaper-engine.serverPort`：本地壁纸服务器端口。
-- `vscode-wallpaper-engine.glassEnabled`：启用支持浮层的玻璃效果。
-- `vscode-wallpaper-engine.glassPreset`：玻璃预设，可选 `subtle`、`liquid`、`solid`。
-- `vscode-wallpaper-engine.glassTint`、`glassOpacity`、`glassBlur`、`glassSaturation`、`glassBorderOpacity`、`glassShadowOpacity`：玻璃效果细节参数。
-- `vscode-wallpaper-engine.transparencyEnabled`：启用 VS Code 颜色自定义透明化。
-- `vscode-wallpaper-engine.transparencyRules`：按界面区域设置透明度规则。
-- `vscode-wallpaper-engine.customCss`：额外注入的运行时 CSS。
-- `vscode-wallpaper-engine.customJs`：额外注入的运行时 JavaScript。
+扩展在 VS Code 的 Electron / workbench 环境中渲染内容，因此最适合浏览器可以直接加载的资源。
 
-## 注意事项
+| Wallpaper Engine 类型 | 支持情况 | 说明 |
+| --- | --- | --- |
+| `image` | 支持 | 加载常见图片文件 |
+| `video` | 支持 | 加载常见视频文件 |
+| `web` | 支持 | 加载 HTML 入口并提供部分 Wallpaper Engine Web API |
+| `scene` / `scene.pkg` | 仅预览 | 无法运行 Wallpaper Engine 原生 scene 渲染器 |
 
-本扩展需要修改 VS Code 安装目录下的 workbench 文件，才能让背景显示在编辑器 UI 后面。
+`scene` 项目默认不会出现在选择列表。需要查看预览图时，可在设置面板开启 **Show preview-only wallpapers**；此模式只显示项目的 `preview.jpg` 或 `preview.png`，并不代表完整渲染 `scene.pkg`。
 
-- VS Code 更新可能会覆盖补丁。更新 VS Code 后，重新执行 **Set Wallpaper: 设置壁纸**。
-- 扩展会在补丁或还原后尝试同步 VS Code 的 product checksum，减少 `[Unsupported]` 或“安装似乎损坏”的提示。
-- 如果仍然出现安装损坏提示，先执行 **Uninstall Wallpaper Engine: 卸载插件** 还原补丁，再重新加载窗口；必要时重新安装 VS Code。
+## 音频与交互
+
+网页壁纸可以通过 `wallpaperRegisterAudioListener` 接收频谱数据。可选来源包括：
+
+- **System**：采集系统播放音频；Windows 使用 WASAPI loopback，不可用时回退到模拟频谱。
+- **Simulate**：生成模拟频谱，无需录音权限。
+- **Microphone**：使用麦克风输入，需要系统授权。
+- **Off**：关闭音频响应。
+
+启用 **Interaction (mouse)** 后，扩展会把编辑器区域中的鼠标移动、点击和滚轮事件转发给网页壁纸，同时保留编辑器本身的输入行为。
+
+## 常用设置
+
+| 设置 | 用途 |
+| --- | --- |
+| `vscode-wallpaper-engine.workshopPath` | Wallpaper Engine 创意工坊目录；留空时自动检测 |
+| `vscode-wallpaper-engine.customWallpaperPaths` | 本地背景文件或目录列表 |
+| `vscode-wallpaper-engine.wallpaperFit` | `contain`、`cover` 或 `fill` |
+| `vscode-wallpaper-engine.audioSource` | `off`、`simulate`、`mic` 或 `system` |
+| `vscode-wallpaper-engine.interactionEnabled` | 是否向网页壁纸转发鼠标事件 |
+| `vscode-wallpaper-engine.backgroundOpacity` | 编辑器背景透明度 |
+| `vscode-wallpaper-engine.glassPreset` | `subtle`、`liquid` 或 `solid` 玻璃预设 |
+| `vscode-wallpaper-engine.transparencyRules` | 按 VS Code 界面区域设置透明度 |
+| `vscode-wallpaper-engine.customCss` | 注入额外的运行时 CSS |
+| `vscode-wallpaper-engine.customJs` | 注入额外的运行时 JavaScript |
+
+完整选项及实时预览可以在 **Open Wallpaper Settings: 打开壁纸设置** 中查看。
+
+## 故障恢复
+
+### 更新 VS Code 后壁纸消失
+
+VS Code 更新会替换 workbench 文件。重新运行 **Set Wallpaper: 设置壁纸**，然后重新加载窗口。
+
+### 出现 `[Unsupported]` 或“安装似乎损坏”
+
+扩展会在修改或还原后同步 product checksum，以减少此类提示。如果问题仍然存在：
+
+1. 运行 **Uninstall Wallpaper Engine: 卸载插件** 还原 workbench。
+2. 重新加载 VS Code。
+3. 再次设置壁纸；仍无法恢复时，重新安装 VS Code。
+
+### 找不到创意工坊目录
+
+确认已通过 Steam 安装 Wallpaper Engine，并用 **Auto Detect** 重新扫描。使用多个 Steam 库时，也可以直接把 `workshop/content/431960` 目录填入 `workshopPath`。
 
 ## 开发
 
 ```powershell
-bun install
+bun install --frozen-lockfile
 bun run check-types
 bun run lint
 bun run test
 bun run output
 ```
 
-关键文件：
+项目的主要模块：
 
-- `src/core/scanner.ts`：Wallpaper Engine 创意工坊扫描和兼容性过滤。
-- `src/core/workshop-detector.ts`：Steam 库和创意工坊路径检测。
-- `src/core/injector.ts`：VS Code workbench 补丁与壁纸注入。
-- `src/core/server.ts`：本地壁纸服务器和 Wallpaper Engine API 兼容层。
-- `media/settings.html`、`media/settings.css`、`media/settings.js`：设置面板界面。
+- `src/core/scanner.ts`：创意工坊扫描和兼容性过滤。
+- `src/core/workshop-detector.ts`：Steam 库与创意工坊路径检测。
+- `src/core/injector.ts`：workbench 修改和壁纸注入。
+- `src/core/server.ts`：本地资源服务与 Wallpaper Engine API 兼容层。
+- `src/core/audio-capture.ts`：原生系统音频采集。
+- `media/`：扩展设置面板。
+
+更完整的运行时通信流程见 [通信架构](docs/COMMUNICATION.md)。
 
 ## 鸣谢
 
-本项目延续并改造自 [vakesamahere/vscode-wallpaper-engine](https://github.com/vakesamahere/vscode-wallpaper-engine) 的思路和基础实现。感谢原作者和贡献者为 VS Code Wallpaper Engine 方向做出的开源工作。
+本项目延续并改造自 [vakesamahere/vscode-wallpaper-engine](https://github.com/vakesamahere/vscode-wallpaper-engine) 的思路和基础实现。感谢原作者与贡献者的开源工作。
 
 ## 许可证
 
-请查看 [LICENSE](LICENSE)。
+本项目采用 [MIT License](LICENSE)。

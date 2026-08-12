@@ -17,7 +17,7 @@
 ### 调整
 
 - 扩展显示名称改为 `Live Wallpaper`。
-- 仓库元数据改为 `https://github.com/MakotoArai-CN/vscode-live-wallpaper.git`。
+- 仓库元数据改为 `https://github.com/MakotoArai-CN/vscode-wallpaper-engine.git`。
 - 壁纸选择列表现在会合并 Wallpaper Engine 项目和本地自定义背景。
 - 项目文档改为中文，并补充兼容性说明、Bun 打包步骤和原项目鸣谢。
 - VS Code 兼容目标调整为 `1.106.1` 及以上，尽量保留旧版 VS Code 安装能力。
