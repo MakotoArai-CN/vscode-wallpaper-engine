@@ -7,9 +7,18 @@ on:
 
 jobs:
   package:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    name: Package ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: win32-x64
+          - os: ubuntu-latest
+            target: linux-x64
+          - os: macos-15-intel
+            target: darwin-x64
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,31 +28,38 @@ jobs:
         with:
           bun-version: 1.3.14
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Run VS Code package script
-        id: package
-        run: bun run vsce-package
+      - name: Build extension
+        run: bun run package
 
-      - name: Find VSIX file name
-        id: find_file
-        run: echo "VSIX_FILE=$(ls *.vsix)" >> $GITHUB_OUTPUT
+      - name: Package VSIX
+        run: bunx vsce package --target ${{ matrix.target }} --out vscode-live-wallpaper-${{ matrix.target }}.vsix --allow-star-activation
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vsix-artifacts
-          path: ${{ steps.find_file.outputs.VSIX_FILE }}
+          name: vsix-${{ matrix.target }}
+          path: vscode-live-wallpaper-${{ matrix.target }}.vsix
           retention-days: 7
 
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download VSIX artifacts
+        uses: actions/download-artifact@v4
         with:
-          files: ${{ steps.find_file.outputs.VSIX_FILE }}
+          pattern: vsix-*
+          path: release
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.vsix

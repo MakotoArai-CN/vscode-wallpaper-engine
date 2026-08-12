@@ -280,9 +280,7 @@
     "LICENSE",
     "node_modules/audify/index.js",
     "node_modules/audify/package.json",
-    "node_modules/audify/build/Release/audify.node",
-    "node_modules/audify/build/Release/rtaudio.dll",
-    "node_modules/audify/build/Release/opus.dll",
+    "node_modules/audify/build/Release/**",
     "node_modules/bindings/**",
     "node_modules/file-uri-to-path/**"
   ],
