@@ -4,6 +4,7 @@
   <p>让 Wallpaper Engine 与本地动态背景自然融入 VS Code。</p>
 
   [![Build](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/actions/workflows/package.yml/badge.svg)](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/actions/workflows/package.yml)
+  [![VS Code](https://img.shields.io/badge/VS%20Code-1.106.1%20%E2%86%92%20latest-007ACC?logo=visualstudiocode)](https://code.visualstudio.com/updates)
   [![Release](https://img.shields.io/github/v/release/MakotoArai-CN/vscode-wallpaper-engine?display_name=tag&sort=semver)](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/releases)
   [![License](https://img.shields.io/github/license/MakotoArai-CN/vscode-wallpaper-engine)](LICENSE)
   [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun&logoColor=14151a)](https://bun.sh/)
@@ -41,7 +42,7 @@ Live Wallpaper 可以在 VS Code 中使用 Wallpaper Engine 创意工坊项目�
 
 下载并解压 Artifact，然后在 VS Code 中运行 **Extensions: Install from VSIX...**，选择其中的 `.vsix` 文件。
 
-带有 `v*` 标签的构建会把三个平台的 VSIX 一并发布到 [Releases](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/releases)。
+带有 `v*` 标签或手动触发的发布构建会把三个平台的 VSIX、自动生成的更新说明和 SHA-256 校验文件一并发布到 [Releases](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/releases)。
 
 ### 本地构建
 
@@ -72,6 +73,8 @@ D:/Steam/steamapps/workshop/content/431960
 ## 壁纸兼容性
 
 扩展在 VS Code 的 Electron / workbench 环境中渲染内容，因此最适合浏览器可以直接加载的资源。
+
+CI 会同时在最低支持版本 `1.106.1` 和最新稳定版 VS Code 上运行扩展测试。当前已针对 VS Code `1.132.1` 的 workbench 发布目录布局完成验证；递归路径发现机制也会兼容后续版本中常见的文件位置调整。
 
 | Wallpaper Engine 类型 | 支持情况 | 说明 |
 | --- | --- | --- |
