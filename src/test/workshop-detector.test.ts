@@ -43,8 +43,9 @@ suite('Workshop Detector Test Suite', () => {
 }`;
 
         const libraries = parseSteamLibraryFoldersVdf(content);
-        assert.ok(libraries.some(item => item.endsWith(path.join('Program Files (x86)', 'Steam'))));
-        assert.ok(libraries.some(item => item.endsWith('SteamLibrary')));
+        const portableLibraries = libraries.map(item => item.replace(/\\/g, '/'));
+        assert.ok(portableLibraries.some(item => item.endsWith('Program Files (x86)/Steam')));
+        assert.ok(portableLibraries.some(item => item.endsWith('SteamLibrary')));
     });
 
     test('detectWallpaperEngineWorkshopPath should resolve libraries from libraryfolders.vdf', async () => {
