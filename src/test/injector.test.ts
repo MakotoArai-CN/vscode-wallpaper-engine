@@ -41,7 +41,7 @@ suite('Injector Test Suite', () => {
         assert.ok(paths.integrityPatchJsPaths.map(path.normalize).includes(sessionsJsPath));
     });
 
-    test('resolveWorkbenchPaths should support the VS Code 1.133 stable layout', () => {
+    test('resolveWorkbenchPaths should support the VS Code 1.132 stable layout', () => {
         const htmlPath = writeAppFile('out/vs/code/electron-browser/workbench/workbench.html');
         const loaderJsPath = writeAppFile('out/vs/code/electron-browser/workbench/workbench.js');
         const mainJsPath = writeAppFile('out/vs/workbench/workbench.desktop.main.js');

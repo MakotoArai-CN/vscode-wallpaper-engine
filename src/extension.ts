@@ -49,9 +49,7 @@ const GLASS_CONFIG_KEYS = [
     'vscode-wallpaper-engine.glassBlur',
     'vscode-wallpaper-engine.glassSaturation',
     'vscode-wallpaper-engine.glassBorderOpacity',
-    'vscode-wallpaper-engine.glassShadowOpacity',
-    'vscode-wallpaper-engine.adaptiveColorsEnabled',
-    'vscode-wallpaper-engine.adaptiveColorsStrength'
+    'vscode-wallpaper-engine.glassShadowOpacity'
 ];
 
 function affectsAny(e: vscode.ConfigurationChangeEvent, keys: string[]): boolean {
@@ -63,9 +61,7 @@ function updateRuntimeCss(config: AppConfig, triggerReload = false) {
 
     server.updateCssConfig({
         customCss: config.customCss,
-        glassCss: buildGlassCss(config.glass),
-        adaptiveColorsEnabled: config.adaptiveColors.enabled,
-        adaptiveColorsStrength: config.adaptiveColors.strength
+        glassCss: buildGlassCss(config.glass)
     });
     server.updateGeneralConfig({
         audioSource: config.audioSource,
@@ -502,9 +498,7 @@ export function activate(context: vscode.ExtensionContext) {
                 const currentConfig = getConfiguration();
                 server.updateCssConfig({
                     customCss: content,
-                    glassCss: buildGlassCss(currentConfig.glass),
-                    adaptiveColorsEnabled: currentConfig.adaptiveColors.enabled,
-                    adaptiveColorsStrength: currentConfig.adaptiveColors.strength
+                    glassCss: buildGlassCss(currentConfig.glass)
                 });
                 server.triggerReload();
                 vscode.window.setStatusBarMessage('Wallpaper CSS Updated', 2000);

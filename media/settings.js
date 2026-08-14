@@ -46,11 +46,6 @@ const glassControls = {
   shadowOpacity: document.getElementById("glass-shadow-opacity"),
 };
 
-const adaptiveColorControls = {
-  enabled: document.getElementById("adaptive-colors-enabled"),
-  strength: document.getElementById("adaptive-colors-strength"),
-};
-
 let glassPreset = (window.glassConfig && window.glassConfig.preset) || "liquid";
 
 function post(command, payload = {}) {
@@ -99,13 +94,6 @@ function collectGlassConfig() {
   };
 }
 
-function collectAdaptiveColorConfig() {
-  return {
-    enabled: adaptiveColorControls.enabled.checked,
-    strength: clamp(adaptiveColorControls.strength.value, 0, 1),
-  };
-}
-
 function setGlassControls(config) {
   const glass = { ...PRESETS.liquid, ...config };
   glassPreset = glass.preset || "liquid";
@@ -144,9 +132,6 @@ function updateGlassPreview() {
   setOutput("glass-saturation-value", glass.saturation.toFixed(2));
   setOutput("glass-border-value", glass.borderOpacity.toFixed(2));
   setOutput("glass-shadow-value", glass.shadowOpacity.toFixed(2));
-  const adaptiveColors = collectAdaptiveColorConfig();
-  setOutput("adaptive-colors-strength-value", adaptiveColors.strength.toFixed(2));
-  adaptiveColorControls.strength.disabled = !adaptiveColors.enabled;
   updatePresetButtons();
 }
 
@@ -162,20 +147,12 @@ Object.values(glassControls).forEach((control) => {
   control.addEventListener("change", updateGlassPreview);
 });
 
-Object.values(adaptiveColorControls).forEach((control) => {
-  control.addEventListener("input", updateGlassPreview);
-  control.addEventListener("change", updateGlassPreview);
-});
-
 document.querySelectorAll("#glass-presets button").forEach((button) => {
   button.addEventListener("click", () => applyGlassPreset(button.dataset.preset));
 });
 
 document.getElementById("btn-save-glass").addEventListener("click", () => {
-  post("updateGlassConfig", {
-    glass: collectGlassConfig(),
-    adaptiveColors: collectAdaptiveColorConfig(),
-  });
+  post("updateGlassConfig", { glass: collectGlassConfig() });
 });
 
 function setStatus(el, text, state) {
@@ -543,9 +520,6 @@ document.getElementById("btn-save-css").addEventListener("click", () => {
   post("updateCss", { customCss: document.getElementById("input-custom-css").value });
 });
 
-const initialAdaptiveColors = window.adaptiveColorConfig || { enabled: true, strength: 0.68 };
-adaptiveColorControls.enabled.checked = initialAdaptiveColors.enabled !== false;
-adaptiveColorControls.strength.value = clamp(initialAdaptiveColors.strength ?? 0.68, 0, 1);
 setGlassControls(window.glassConfig || PRESETS.liquid);
 renderGeneralSettings();
 renderTransparencyRules();

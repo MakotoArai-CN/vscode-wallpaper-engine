@@ -676,180 +676,12 @@ const jsInjection = `
         transparencyStyle.id = 'vscode-wallpaper-transparency';
         document.head.appendChild(transparencyStyle);
 
-        let lastRuntimeConfig = null;
-        let adaptiveColorRequest = 0;
-
-        function clampColor(value) {
-            return Math.max(0, Math.min(255, Math.round(value)));
-        }
-
-        function getWeightedPalette(imageData) {
-            const pixels = imageData.data;
-            const bins = new Map();
-            let totalWeight = 0;
-            let weightedR = 0;
-            let weightedG = 0;
-            let weightedB = 0;
-
-            for (let i = 0; i < pixels.length; i += 4) {
-                if (pixels[i + 3] < 160) { continue; }
-                const r = pixels[i];
-                const g = pixels[i + 1];
-                const b = pixels[i + 2];
-                const max = Math.max(r, g, b);
-                const min = Math.min(r, g, b);
-                const saturation = max === 0 ? 0 : (max - min) / max;
-                const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-                const edgePenalty = luminance < 0.035 || luminance > 0.965 ? 0.08 : 1;
-                const weight = (0.18 + saturation * 1.82) * edgePenalty;
-                if (weight <= 0.02) { continue; }
-
-                totalWeight += weight;
-                weightedR += r * weight;
-                weightedG += g * weight;
-                weightedB += b * weight;
-
-                const key = (r >> 5) + ':' + (g >> 5) + ':' + (b >> 5);
-                const bin = bins.get(key) || { weight: 0, r: 0, g: 0, b: 0 };
-                bin.weight += weight;
-                bin.r += r * weight;
-                bin.g += g * weight;
-                bin.b += b * weight;
-                bins.set(key, bin);
-            }
-
-            if (totalWeight === 0 || bins.size === 0) { return null; }
-            let dominant = null;
-            for (const bin of bins.values()) {
-                if (!dominant || bin.weight > dominant.weight) { dominant = bin; }
-            }
-            if (!dominant) { return null; }
-
-            const average = {
-                r: weightedR / totalWeight,
-                g: weightedG / totalWeight,
-                b: weightedB / totalWeight
-            };
-            const dominantColor = {
-                r: dominant.r / dominant.weight,
-                g: dominant.g / dominant.weight,
-                b: dominant.b / dominant.weight
-            };
-            return {
-                r: clampColor(dominantColor.r * 0.68 + average.r * 0.32),
-                g: clampColor(dominantColor.g * 0.68 + average.g * 0.32),
-                b: clampColor(dominantColor.b * 0.68 + average.b * 0.32)
-            };
-        }
-
-        function sampleVisual(source) {
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = 32;
-                canvas.height = 32;
-                const context = canvas.getContext('2d', { willReadFrequently: true });
-                if (!context) { return null; }
-                context.drawImage(source, 0, 0, canvas.width, canvas.height);
-                return getWeightedPalette(context.getImageData(0, 0, canvas.width, canvas.height));
-            } catch (error) {
-                console.debug('[WP colors] Visual sampling unavailable:', error);
-                return null;
-            }
-        }
-
-        async function sampleWallpaperPreview() {
-            const candidates = ['/preview.jpg', '/preview.png', '/preview.jpeg', '/preview.webp'];
-            try {
-                const projectResponse = await fetch(SERVER_ROOT + '/project.json', { cache: 'no-store' });
-                if (projectResponse.ok) {
-                    const project = await projectResponse.json();
-                    if (project && typeof project.preview === 'string' && project.preview.trim()) {
-                        candidates.unshift('/' + project.preview.replace(/^[/\\\\]+/, ''));
-                    }
-                }
-            } catch (error) {
-                // Custom wallpapers do not need a project.json file.
-            }
-            for (const candidate of candidates) {
-                try {
-                    const response = await fetch(SERVER_ROOT + candidate, { cache: 'no-store' });
-                    if (!response.ok) { continue; }
-                    const bitmap = await createImageBitmap(await response.blob());
-                    const palette = sampleVisual(bitmap);
-                    bitmap.close();
-                    if (palette) { return palette; }
-                } catch (error) {
-                    // Try the next conventional preview name.
-                }
-            }
-            return null;
-        }
-
-        function applyAdaptivePalette(palette, strength) {
-            const root = document.documentElement;
-            const rawLuminance = (0.2126 * palette.r + 0.7152 * palette.g + 0.0722 * palette.b) / 255;
-            const scale = rawLuminance > 0.62 ? 0.58 : rawLuminance < 0.12 ? 1.32 : 0.82;
-            const r = clampColor(palette.r * scale);
-            const g = clampColor(palette.g * scale);
-            const b = clampColor(palette.b * scale);
-            const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-            const mixTarget = luminance < 0.48 ? 255 : 0;
-            const accentR = clampColor(r * 0.72 + mixTarget * 0.28);
-            const accentG = clampColor(g * 0.72 + mixTarget * 0.28);
-            const accentB = clampColor(b * 0.72 + mixTarget * 0.28);
-            const foreground = luminance < 0.5 ? 'rgba(255, 255, 255, 0.94)' : 'rgba(15, 23, 42, 0.94)';
-            const amount = Math.max(0, Math.min(1, Number(strength)));
-
-            root.dataset.vweAdaptiveColors = 'true';
-            root.style.setProperty('--vwe-adaptive-nav-bg', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (0.24 + amount * 0.46).toFixed(3) + ')');
-            root.style.setProperty('--vwe-adaptive-top-bg', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (0.18 + amount * 0.38).toFixed(3) + ')');
-            root.style.setProperty('--vwe-adaptive-active-bg', 'rgba(' + accentR + ', ' + accentG + ', ' + accentB + ', ' + (0.18 + amount * 0.32).toFixed(3) + ')');
-            root.style.setProperty('--vwe-adaptive-border', 'rgba(' + accentR + ', ' + accentG + ', ' + accentB + ', ' + (0.18 + amount * 0.26).toFixed(3) + ')');
-            root.style.setProperty('--vwe-adaptive-fg', foreground);
-        }
-
-        function clearAdaptivePalette() {
-            const root = document.documentElement;
-            delete root.dataset.vweAdaptiveColors;
-            for (const property of ['--vwe-adaptive-nav-bg', '--vwe-adaptive-top-bg', '--vwe-adaptive-active-bg', '--vwe-adaptive-border', '--vwe-adaptive-fg']) {
-                root.style.removeProperty(property);
-            }
-        }
-
-        async function refreshAdaptivePalette(config) {
-            const request = ++adaptiveColorRequest;
-            if (!config || !config.adaptiveColorsEnabled) {
-                clearAdaptivePalette();
-                return;
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 420));
-            if (request !== adaptiveColorRequest) { return; }
-
-            let palette = null;
-            if (typeof el !== 'undefined' && el) {
-                if (el.tagName === 'IMG' && el.complete && el.naturalWidth > 0) {
-                    palette = sampleVisual(el);
-                } else if (el.tagName === 'VIDEO' && el.readyState >= 2) {
-                    palette = sampleVisual(el);
-                }
-            }
-            if (!palette) { palette = await sampleWallpaperPreview(); }
-            if (request !== adaptiveColorRequest) { return; }
-            if (palette) {
-                applyAdaptivePalette(palette, config.adaptiveColorsStrength);
-            } else {
-                clearAdaptivePalette();
-            }
-        }
-
         async function updateCss() {
             try {
                 console.log("[WP style inj] Fetching config from " + CONFIG_URL);
                 const res = await fetch(CONFIG_URL);
                 if (res.ok) {
                     const config = await res.json();
-                    lastRuntimeConfig = config;
                     console.log("[WP style inj] Got config:", config);
                     if (typeof config.interaction === 'boolean') {
                         weInteractionEnabled = config.interaction;
@@ -863,7 +695,6 @@ const jsInjection = `
                     } else {
                         console.log("[WP style inj] CSS is identical, skipping update.");
                     }
-                    void refreshAdaptivePalette(config);
                 } else {
                     console.error("[WP style inj] Fetch failed status:", res.status);
                 }
@@ -1009,12 +840,6 @@ const jsInjection = `
 
         let el;
         ${elementCreationCode}
-
-        if (el.tagName === 'IMG') {
-            el.addEventListener('load', function() { if (lastRuntimeConfig) { void refreshAdaptivePalette(lastRuntimeConfig); } });
-        } else if (el.tagName === 'VIDEO') {
-            el.addEventListener('loadeddata', function() { if (lastRuntimeConfig) { void refreshAdaptivePalette(lastRuntimeConfig); } });
-        }
 
         el.style.width = '100%';
         el.style.height = '100%';
