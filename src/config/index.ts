@@ -16,6 +16,7 @@ export interface AppConfig {
     audioSource: AudioSource;
     interactionEnabled: boolean;
     glass: GlassConfig;
+    adaptiveColors: AdaptiveColorConfig;
 }
 
 export type GlassPreset = 'subtle' | 'liquid' | 'solid';
@@ -31,6 +32,11 @@ export interface GlassConfig {
     saturation: number;
     borderOpacity: number;
     shadowOpacity: number;
+}
+
+export interface AdaptiveColorConfig {
+    enabled: boolean;
+    strength: number;
 }
 
 const GLASS_PRESETS: Record<GlassPreset, GlassConfig> = {
@@ -126,6 +132,78 @@ export function buildGlassCss(glass: GlassConfig): string {
     --vwe-glass-saturation: ${glass.saturation};
     --vwe-glass-radius: ${radius}px;
     --vwe-glass-filter: blur(var(--vwe-glass-blur)) contrast(1.14) brightness(1.04) saturate(var(--vwe-glass-saturation));
+    --vwe-adaptive-nav-bg: var(--vwe-glass-bg);
+    --vwe-adaptive-top-bg: var(--vwe-glass-bg);
+    --vwe-adaptive-active-bg: var(--vwe-glass-focus);
+    --vwe-adaptive-border: var(--vwe-glass-border);
+    --vwe-adaptive-fg: var(--vscode-foreground);
+}
+
+/* VS Code 1.133 Agent/Chat surfaces */
+.monaco-workbench .chat-viewpane,
+.monaco-workbench .chat-viewpane-container,
+.monaco-workbench .chat-widget,
+.monaco-workbench .interactive-session,
+.monaco-workbench .agent-host-chat,
+.monaco-workbench .agent-sessions,
+.monaco-workbench .agent-sessions-container,
+.monaco-workbench .agent-sessions-viewer,
+.monaco-workbench .chat-editor-container,
+.monaco-workbench .chat-editing-session-container,
+.monaco-workbench .chat-viewpane .monaco-list,
+.monaco-workbench .chat-widget .monaco-list,
+.monaco-workbench .agent-sessions .monaco-list {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.monaco-workbench .chat-widget .monaco-inputbox,
+.monaco-workbench .interactive-session .monaco-inputbox,
+.monaco-workbench .agent-host-chat .monaco-inputbox,
+.monaco-workbench .agent-sessions-control-container,
+.monaco-workbench .agent-sessions-new-button-container,
+.monaco-workbench .chat-editing-session-overview,
+.monaco-workbench .chat-input-container,
+.monaco-workbench .chat-input-window {
+    background: var(--vwe-glass-bg-static) !important;
+    background-color: var(--vwe-glass-bg-static) !important;
+    border-color: var(--vwe-glass-border) !important;
+    -webkit-backdrop-filter: var(--vwe-glass-filter) !important;
+    backdrop-filter: var(--vwe-glass-filter) !important;
+}
+
+/* Wallpaper-weighted navigation and top chrome */
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar {
+    background: var(--vwe-adaptive-nav-bg) !important;
+    background-color: var(--vwe-adaptive-nav-bg) !important;
+    border-color: var(--vwe-adaptive-border) !important;
+    -webkit-backdrop-filter: var(--vwe-glass-filter) !important;
+    backdrop-filter: var(--vwe-glass-filter) !important;
+}
+
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.titlebar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .titlebar-container,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar {
+    background: var(--vwe-adaptive-top-bg) !important;
+    background-color: var(--vwe-adaptive-top-bg) !important;
+    border-color: var(--vwe-adaptive-border) !important;
+    -webkit-backdrop-filter: var(--vwe-glass-filter) !important;
+    backdrop-filter: var(--vwe-glass-filter) !important;
+}
+
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar .action-item.checked,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar .action-item:hover,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar .menubar-menu-button:hover,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar .menubar-menu-button.open {
+    background: var(--vwe-adaptive-active-bg) !important;
+}
+
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.titlebar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar {
+    color: var(--vwe-adaptive-fg) !important;
 }
 
 .quick-input-widget,
@@ -254,8 +332,12 @@ export function getConfiguration(): AppConfig {
     const audioSource = config.get<AudioSource>('audioSource') || 'system';
     const interactionEnabled = config.get<boolean>('interactionEnabled') ?? true;
     const glass = getGlassConfiguration(config);
+    const adaptiveColors: AdaptiveColorConfig = {
+        enabled: config.get<boolean>('adaptiveColorsEnabled') ?? true,
+        strength: clamp(config.get<number>('adaptiveColorsStrength') ?? 0.68, 0, 1)
+    };
 
-    return { workshopPath, opacity, serverPort, customJs, wallpaperId, resizeDelay, startupCheckInterval, customCss, customWallpaperPaths, wallpaperFit, showUnsupportedWallpapers, audioSource, interactionEnabled, glass };
+    return { workshopPath, opacity, serverPort, customJs, wallpaperId, resizeDelay, startupCheckInterval, customCss, customWallpaperPaths, wallpaperFit, showUnsupportedWallpapers, audioSource, interactionEnabled, glass, adaptiveColors };
 }
 
 export function validateConfig(config: AppConfig): boolean {

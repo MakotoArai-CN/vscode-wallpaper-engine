@@ -10,6 +10,8 @@ import { MOCK_API_SCRIPT, BOOTSTRAP_SCRIPT } from './web-api-mock';
 interface WallpaperCssConfig {
     customCss: string;
     glassCss: string;
+    adaptiveColorsEnabled: boolean;
+    adaptiveColorsStrength: number;
 }
 
 interface WallpaperGeneralConfig {
@@ -36,7 +38,9 @@ export class WallpaperServer {
 
     private cssConfig: WallpaperCssConfig = {
         customCss: '',
-        glassCss: ''
+        glassCss: '',
+        adaptiveColorsEnabled: true,
+        adaptiveColorsStrength: 0.68
     };
 
     private generalConfig: WallpaperGeneralConfig = {

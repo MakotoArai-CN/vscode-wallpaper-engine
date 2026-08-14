@@ -147,7 +147,9 @@ export class SettingsPanel {
                     const nextConfig = getConfiguration();
                     this.server.updateCssConfig({
                         customCss: message.customCss,
-                        glassCss: buildGlassCss(nextConfig.glass)
+                        glassCss: buildGlassCss(nextConfig.glass),
+                        adaptiveColorsEnabled: nextConfig.adaptiveColors.enabled,
+                        adaptiveColorsStrength: nextConfig.adaptiveColors.strength
                     });
                     
                     console.log('[Panel] Triggering server reload...');
@@ -167,7 +169,9 @@ export class SettingsPanel {
                             ['glassBlur', glass.blur],
                             ['glassSaturation', glass.saturation],
                             ['glassBorderOpacity', glass.borderOpacity],
-                            ['glassShadowOpacity', glass.shadowOpacity]
+                            ['glassShadowOpacity', glass.shadowOpacity],
+                            ['adaptiveColorsEnabled', Boolean(message.adaptiveColors?.enabled)],
+                            ['adaptiveColorsStrength', message.adaptiveColors?.strength]
                         ];
 
                         for (const [key, value] of updates) {
@@ -177,7 +181,9 @@ export class SettingsPanel {
                         const nextConfig = getConfiguration();
                         this.server.updateCssConfig({
                             customCss: nextConfig.customCss,
-                            glassCss: buildGlassCss(nextConfig.glass)
+                            glassCss: buildGlassCss(nextConfig.glass),
+                            adaptiveColorsEnabled: nextConfig.adaptiveColors.enabled,
+                            adaptiveColorsStrength: nextConfig.adaptiveColors.strength
                         });
                         this.server.triggerReload();
                         vscode.window.setStatusBarMessage('Glass effect updated', 2000);
@@ -244,6 +250,7 @@ export class SettingsPanel {
         const appConfig = getConfiguration();
         const customCss = appConfig.customCss;
         const glassConfig = appConfig.glass;
+        const adaptiveColorConfig = appConfig.adaptiveColors;
         const transparencyRules = config.get<any>('transparencyRules') || {};
         const transparencyEnabled = config.get<boolean>('transparencyEnabled') ?? true;
         const transparencyBaseColor = config.get<string>('transparencyBaseColor') || '';
@@ -287,6 +294,7 @@ export class SettingsPanel {
             .replace(/{{serverPort}}/g, port.toString())
             .replace(/{{customCss}}/g, escapeHtml(customCss))
             .replace(/{{glassConfig}}/g, JSON.stringify(glassConfig))
+            .replace(/{{adaptiveColorConfig}}/g, JSON.stringify(adaptiveColorConfig))
             .replace(/{{workshopPath}}/g, escapeHtml(workshopPath || 'Not detected'))
             .replace(/{{customWallpaperCount}}/g, customWallpaperCount.toString())
             .replace(/{{transparencyKeys}}/g, JSON.stringify(TRANSPARENT_COLOR_KEYS))

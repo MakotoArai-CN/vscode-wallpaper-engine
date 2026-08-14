@@ -4,7 +4,7 @@
   <p>让 Wallpaper Engine 与本地动态背景自然融入 VS Code。</p>
 
   [![Build](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/actions/workflows/package.yml/badge.svg)](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/actions/workflows/package.yml)
-  [![VS Code](https://img.shields.io/badge/VS%20Code-1.106.1%20%E2%86%92%20latest-007ACC?logo=visualstudiocode)](https://code.visualstudio.com/updates)
+  [![VS Code](https://img.shields.io/badge/VS%20Code-1.106.1%20%E2%86%92%201.133.0-007ACC?logo=visualstudiocode)](https://code.visualstudio.com/updates)
   [![Release](https://img.shields.io/github/v/release/MakotoArai-CN/vscode-wallpaper-engine?display_name=tag&sort=semver)](https://github.com/MakotoArai-CN/vscode-wallpaper-engine/releases)
   [![License](https://img.shields.io/github/license/MakotoArai-CN/vscode-wallpaper-engine)](LICENSE)
   [![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun&logoColor=14151a)](https://bun.sh/)
@@ -27,6 +27,7 @@ Live Wallpaper 可以在 VS Code 中使用 Wallpaper Engine 创意工坊项目�
 | 本地图片、视频、HTML 文件及目录 | `subtle`、`liquid`、`solid` 玻璃预设 | 设置面板集中管理壁纸与状态 |
 | 系统音频、麦克风或模拟频谱响应 | `contain`、`cover`、`fill` 显示模式 | 大型壁纸库异步扫描与兼容性过滤 |
 | 网页壁纸鼠标移动、点击和滚轮转发 | 自定义 CSS 与 JavaScript 注入 | VS Code workbench 路径自动适配 |
+| 壁纸主色加权取样 | 左侧导航与顶部菜单自适应配色 | Agent、Chat 与编辑会话玻璃界面 |
 
 ## 安装
 
@@ -74,7 +75,7 @@ D:/Steam/steamapps/workshop/content/431960
 
 扩展在 VS Code 的 Electron / workbench 环境中渲染内容，因此最适合浏览器可以直接加载的资源。
 
-CI 会同时在最低支持版本 `1.106.1` 和最新稳定版 VS Code 上运行扩展测试。当前已针对 VS Code `1.132.1` 的 workbench 发布目录布局完成验证；递归路径发现机制也会兼容后续版本中常见的文件位置调整。
+CI 会同时在最低支持版本 `1.106.1` 和最新稳定版 VS Code 上运行扩展测试。当前已针对 VS Code `1.133.0` 的 workbench 发布目录布局完成验证，并适配 Agent Sessions、Agent Host Chat、Chat 编辑器和辅助栏；递归路径发现机制也会兼容后续版本中常见的文件位置调整。
 
 | Wallpaper Engine 类型 | 支持情况 | 说明 |
 | --- | --- | --- |
@@ -107,6 +108,8 @@ CI 会同时在最低支持版本 `1.106.1` 和最新稳定版 VS Code 上运行
 | `vscode-wallpaper-engine.interactionEnabled` | 是否向网页壁纸转发鼠标事件 |
 | `vscode-wallpaper-engine.backgroundOpacity` | 编辑器背景透明度 |
 | `vscode-wallpaper-engine.glassPreset` | `subtle`、`liquid` 或 `solid` 玻璃预设 |
+| `vscode-wallpaper-engine.adaptiveColorsEnabled` | 根据壁纸主色调整左侧导航、辅助栏和顶部菜单 |
+| `vscode-wallpaper-engine.adaptiveColorsStrength` | 自适应配色强度，范围为 `0` 到 `1` |
 | `vscode-wallpaper-engine.transparencyRules` | 按 VS Code 界面区域设置透明度 |
 | `vscode-wallpaper-engine.customCss` | 注入额外的运行时 CSS |
 | `vscode-wallpaper-engine.customJs` | 注入额外的运行时 JavaScript |
