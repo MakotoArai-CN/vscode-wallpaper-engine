@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/MakotoArai-CN/vscode-wallpaper-engine/issues"
   },
-  "version": "0.0.6",
+  "version": "0.0.7",
   "packageManager": "bun@1.3.14",
   "engines": {
     "vscode": "^1.106.1"
@@ -215,6 +215,23 @@
           "minimum": 0,
           "maximum": 1,
           "description": "玻璃浮层阴影强度。"
+        },
+        "vscode-wallpaper-engine.adaptiveColorsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "根据当前壁纸的加权主色，为左侧导航、辅助栏和顶部菜单生成半透明配色。"
+        },
+        "vscode-wallpaper-engine.adaptiveColorsStrength": {
+          "type": "number",
+          "default": 0.68,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "壁纸自适应配色强度。较低值更接近当前 VS Code 主题，较高值更突出壁纸主色。"
+        },
+        "vscode-wallpaper-engine.adaptiveColorsRespectTransparency": {
+          "type": "boolean",
+          "default": true,
+          "description": "让壁纸自适应配色叠加透明度规则：导航/顶栏的着色透明度会乘以对应区域（sideBar.background、titleBar.activeBackground）的透明度设置，而不是覆盖它。"
         },
         "vscode-wallpaper-engine.transparencyEnabled": {
           "type": "boolean",

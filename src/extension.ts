@@ -49,7 +49,10 @@ const GLASS_CONFIG_KEYS = [
     'vscode-wallpaper-engine.glassBlur',
     'vscode-wallpaper-engine.glassSaturation',
     'vscode-wallpaper-engine.glassBorderOpacity',
-    'vscode-wallpaper-engine.glassShadowOpacity'
+    'vscode-wallpaper-engine.glassShadowOpacity',
+    'vscode-wallpaper-engine.adaptiveColorsEnabled',
+    'vscode-wallpaper-engine.adaptiveColorsStrength',
+    'vscode-wallpaper-engine.adaptiveColorsRespectTransparency'
 ];
 
 function affectsAny(e: vscode.ConfigurationChangeEvent, keys: string[]): boolean {
@@ -61,7 +64,12 @@ function updateRuntimeCss(config: AppConfig, triggerReload = false) {
 
     server.updateCssConfig({
         customCss: config.customCss,
-        glassCss: buildGlassCss(config.glass)
+        glassCss: buildGlassCss(config.glass),
+        adaptiveColorsEnabled: config.adaptiveColors.enabled,
+        adaptiveColorsStrength: config.adaptiveColors.strength,
+        adaptiveColorsRespectTransparency: config.adaptiveColors.respectTransparency,
+        adaptiveNavAlpha: config.adaptiveColors.navAlpha,
+        adaptiveTopAlpha: config.adaptiveColors.topAlpha
     });
     server.updateGeneralConfig({
         audioSource: config.audioSource,
@@ -184,12 +192,18 @@ export function activate(context: vscode.ExtensionContext) {
             applyAudioSource(config);
         }
 
-        await performInjection(filePath, type, config.opacity, config.serverPort, config.customJs, config.resizeDelay, config.startupCheckInterval, false, SHOW_DEBUG_SIDEBAR, config.wallpaperFit, config.interactionEnabled);
+        const injectionChanged = await performInjection(filePath, type, config.opacity, config.serverPort, config.customJs, config.resizeDelay, config.startupCheckInterval, false, SHOW_DEBUG_SIDEBAR, config.wallpaperFit, config.interactionEnabled);
         
         // Apply transparency patch
         await applyTransparencyPatch();
         
-        if (silent) { return; }
+        if (silent) {
+            if (injectionChanged) {
+                vscode.window.setStatusBarMessage('Live Wallpaper updated. Reloading...', 5000);
+                await vscode.commands.executeCommand('workbench.action.reloadWindow');
+            }
+            return;
+        }
 
         if (forceReload) {
             vscode.commands.executeCommand('workbench.action.reloadWindow');
@@ -226,8 +240,7 @@ export function activate(context: vscode.ExtensionContext) {
         const affectsTransparency =
             e.affectsConfiguration('vscode-wallpaper-engine.transparencyEnabled') ||
             e.affectsConfiguration('vscode-wallpaper-engine.transparencyBaseColor') ||
-            e.affectsConfiguration('vscode-wallpaper-engine.transparencyRules');
-        const affectsAudio = e.affectsConfiguration('vscode-wallpaper-engine.audioSource');
+            e.affectsConfiguration('vscode-wallpaper-engine.transparencyRules');        const affectsAudio = e.affectsConfiguration('vscode-wallpaper-engine.audioSource');
         const affectsInteraction = e.affectsConfiguration('vscode-wallpaper-engine.interactionEnabled');
         const affectsGeneral = affectsAudio || affectsInteraction;
 
@@ -262,6 +275,8 @@ export function activate(context: vscode.ExtensionContext) {
 
             if (affectsTransparency) {
                 await applyTransparencyPatch();
+                // Transparency rules feed the adaptive nav/top tint alpha, so refresh runtime CSS too.
+                updateRuntimeCss(config, true);
             }
 
             if (affectsRuntimeCss || affectsTransparency || affectsGeneral) {
@@ -382,9 +397,12 @@ export function activate(context: vscode.ExtensionContext) {
                     applyAudioSource(config);
                 }
                 
-                // Pass autoRestart=false because we handle reload via ping
-                await performInjection(filePath, type, config.opacity, config.serverPort, config.customJs, config.resizeDelay, config.startupCheckInterval, false, SHOW_DEBUG_SIDEBAR, config.wallpaperFit, config.interactionEnabled);
+                const injectionChanged = await performInjection(filePath, type, config.opacity, config.serverPort, config.customJs, config.resizeDelay, config.startupCheckInterval, false, SHOW_DEBUG_SIDEBAR, config.wallpaperFit, config.interactionEnabled);
                 await applyTransparencyPatch();
+                if (injectionChanged) {
+                    vscode.window.setStatusBarMessage('Wallpaper changed. Reloading...', 5000);
+                    await vscode.commands.executeCommand('workbench.action.reloadWindow');
+                }
             } finally {
                 setTimeout(() => { isSettingWallpaper = false; }, 2000);
             }
@@ -498,7 +516,12 @@ export function activate(context: vscode.ExtensionContext) {
                 const currentConfig = getConfiguration();
                 server.updateCssConfig({
                     customCss: content,
-                    glassCss: buildGlassCss(currentConfig.glass)
+                    glassCss: buildGlassCss(currentConfig.glass),
+                    adaptiveColorsEnabled: currentConfig.adaptiveColors.enabled,
+                    adaptiveColorsStrength: currentConfig.adaptiveColors.strength,
+                    adaptiveColorsRespectTransparency: currentConfig.adaptiveColors.respectTransparency,
+                    adaptiveNavAlpha: currentConfig.adaptiveColors.navAlpha,
+                    adaptiveTopAlpha: currentConfig.adaptiveColors.topAlpha
                 });
                 server.triggerReload();
                 vscode.window.setStatusBarMessage('Wallpaper CSS Updated', 2000);

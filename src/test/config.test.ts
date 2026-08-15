@@ -19,6 +19,13 @@ suite('Config Test Suite', () => {
             showUnsupportedWallpapers: false,
             audioSource: 'system' as const,
             interactionEnabled: true,
+            adaptiveColors: {
+                enabled: true,
+                strength: 0.68,
+                respectTransparency: true,
+                navAlpha: 1,
+                topAlpha: 1
+            },
             glass: {
                 enabled: true,
                 preset: 'liquid' as const,
@@ -50,5 +57,12 @@ suite('Config Test Suite', () => {
         assert.ok(!css.includes('.monaco-menu-container'));
         assert.ok(!css.includes('.monaco-menu'));
         assert.ok(!css.includes('linear-gradient'));
+        assert.ok(css.includes('.agent-host-chat'));
+        assert.ok(css.includes('.agent-sessions-container'));
+        assert.ok(css.includes('.part.auxiliarybar .pane.chat-viewpane-container'));
+        assert.ok(css.includes('.chat-input-container .monaco-editor-background'));
+        assert.ok(css.includes('.part.sidebar .monaco-list-rows'));
+        assert.ok(css.includes('.part.auxiliarybar .monaco-list-rows'));
+        assert.ok(css.includes('data-vwe-adaptive-colors'));
     });
 });

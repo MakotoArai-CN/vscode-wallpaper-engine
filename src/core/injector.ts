@@ -14,6 +14,11 @@ const INTEGRITY_BYPASS_MARKER = '/* [VSCode-Wallpaper-Integrity-Bypass] */';
 const INTEGRITY_BYPASS_REGEX = /this\.storage=new ([\w$]+)\(([\w$]+)\),this\.isPurePromise=Promise\.resolve\(\{isPure:!0,proof:\[\]\}\)\/\* \[VSCode-Wallpaper-Integrity-Bypass\] \*\//g;
 const INTEGRITY_CONSTRUCTOR_REGEX = /this\.storage=new ([\w$]+)\(([\w$]+)\),this\.isPurePromise=this\._isPure\(\),this\._compute\(\)/g;
 
+export function updateWorkbenchJsContent(raw: string, jsInjection: string, shouldInject: boolean): string {
+    const cleaned = raw.replace(JS_INJECTION_REGEX, '');
+    return shouldInject ? cleaned + jsInjection : cleaned;
+}
+
 // HTML 新 CSP 标记
 const CSP_MARKER_START = '<!-- VSCode-Wallpaper-Injection-Start -->';
 const CSP_MARKER_END = '<!-- VSCode-Wallpaper-Injection-End -->';
@@ -444,7 +449,7 @@ function findCspMetaTag(html: string): { tag: string; index: number } | undefine
     return undefined;
 }
 
-async function injectJs(mediaPath: string, type: WallpaperType, opacity: number, port: number, customJs: string, resizeDelay: number, startupCheckInterval: number, showDebugSidebar: boolean, wallpaperFit: 'contain' | 'cover' | 'fill', interactionEnabled: boolean) {
+async function injectJs(mediaPath: string, type: WallpaperType, opacity: number, port: number, customJs: string, resizeDelay: number, startupCheckInterval: number, showDebugSidebar: boolean, wallpaperFit: 'contain' | 'cover' | 'fill', interactionEnabled: boolean): Promise<boolean> {
     let elementCreationCode = '';
 
     if (type === WallpaperType.Video) {
@@ -666,8 +671,22 @@ const jsInjection = `
         baseStyle.textContent = [
             'html, body { background: transparent !important; background-color: transparent !important; }',
             'div[role="application"], .monaco-workbench { background: transparent !important; position: relative !important; z-index: 1 !important; }',
+            // VS Code 1.133 paints an opaque background on the top-level grid/split-view layout
+            // container (rgb(25,26,27)); it covers the z-index:0 wallpaper layer and is the real
+            // reason the wallpaper "flashes then disappears" once the workbench grid renders.
+            '.monaco-workbench .monaco-grid-view, .monaco-workbench .monaco-grid-view .split-view-view, .monaco-workbench .grid-view-container { background: transparent !important; background-color: transparent !important; }',
             '.monaco-workbench .part.editor, .monaco-workbench .part.sidebar, .monaco-workbench .part.panel, .monaco-workbench .part.auxiliarybar { background: transparent !important; }',
-            '.monaco-workbench .editor-group-container, .monaco-workbench .active.empty { background: transparent !important; }'
+            '.monaco-workbench .editor-group-container, .monaco-workbench .active.empty { background: transparent !important; }',
+            // The editor instance and its painted background layer are opaque in 1.133; clear them
+            // so the wallpaper shows through the code surface (text/gutter stay legible on top).
+            '.monaco-workbench .part.editor .monaco-editor, .monaco-workbench .part.editor .monaco-editor .monaco-editor-background, .monaco-workbench .part.editor .monaco-editor .margin, .monaco-workbench .part.editor .editor-scrollable { background: transparent !important; background-color: transparent !important; }',
+            '.monaco-workbench .part.editor .editor-group-container > .editor-container, .monaco-workbench .part.editor .empty-editor-group, .monaco-workbench .part.editor .split-view-view { background: transparent !important; background-color: transparent !important; }',
+            // 1.133 also paints opaque backgrounds on the auxiliary/side pane bodies and the
+            // embedded editors they host (e.g. the chat view "chat-overflow-widget-container
+            // monaco-editor" at rgb(25,26,27)), which sit above the wallpaper layer. These are
+            // NOT under .part.editor, so the scoped rules above miss them — clear them broadly.
+            '.monaco-workbench .pane-body, .monaco-workbench .pane.chat-viewpane-container, .monaco-workbench .part.sidebar .monaco-editor, .monaco-workbench .part.auxiliarybar .monaco-editor { background: transparent !important; background-color: transparent !important; }',
+            '.monaco-workbench .monaco-editor .monaco-editor-background, .monaco-workbench .monaco-editor .margin { background: transparent !important; background-color: transparent !important; }'
         ].join('\\n');
         document.head.appendChild(baseStyle);
 
@@ -676,12 +695,223 @@ const jsInjection = `
         transparencyStyle.id = 'vscode-wallpaper-transparency';
         document.head.appendChild(transparencyStyle);
 
+        let lastRuntimeConfig = null;
+        let adaptiveColorRequest = 0;
+
+        function clampColor(value) {
+            return Math.max(0, Math.min(255, Math.round(value)));
+        }
+
+        function relativeLuminance(r, g, b) {
+            const linear = function(channel) {
+                const c = channel / 255;
+                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+        }
+
+        function contrastRatio(lumA, lumB) {
+            const lighter = Math.max(lumA, lumB);
+            const darker = Math.min(lumA, lumB);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        function getWeightedPalette(imageData) {
+            const pixels = imageData.data;
+            const bins = new Map();
+            let totalWeight = 0;
+            let weightedR = 0;
+            let weightedG = 0;
+            let weightedB = 0;
+
+            for (let i = 0; i < pixels.length; i += 4) {
+                if (pixels[i + 3] < 160) { continue; }
+                const r = pixels[i];
+                const g = pixels[i + 1];
+                const b = pixels[i + 2];
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                const saturation = max === 0 ? 0 : (max - min) / max;
+                const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+                const edgePenalty = luminance < 0.035 || luminance > 0.965 ? 0.08 : 1;
+                const weight = (0.18 + saturation * 1.82) * edgePenalty;
+                if (weight <= 0.02) { continue; }
+
+                totalWeight += weight;
+                weightedR += r * weight;
+                weightedG += g * weight;
+                weightedB += b * weight;
+
+                const key = (r >> 5) + ':' + (g >> 5) + ':' + (b >> 5);
+                const bin = bins.get(key) || { weight: 0, r: 0, g: 0, b: 0 };
+                bin.weight += weight;
+                bin.r += r * weight;
+                bin.g += g * weight;
+                bin.b += b * weight;
+                bins.set(key, bin);
+            }
+
+            if (totalWeight === 0 || bins.size === 0) { return null; }
+            let dominant = null;
+            for (const bin of bins.values()) {
+                if (!dominant || bin.weight > dominant.weight) { dominant = bin; }
+            }
+            if (!dominant) { return null; }
+
+            const average = {
+                r: weightedR / totalWeight,
+                g: weightedG / totalWeight,
+                b: weightedB / totalWeight
+            };
+            const dominantColor = {
+                r: dominant.r / dominant.weight,
+                g: dominant.g / dominant.weight,
+                b: dominant.b / dominant.weight
+            };
+            return {
+                r: clampColor(dominantColor.r * 0.68 + average.r * 0.32),
+                g: clampColor(dominantColor.g * 0.68 + average.g * 0.32),
+                b: clampColor(dominantColor.b * 0.68 + average.b * 0.32)
+            };
+        }
+
+        function sampleVisual(source) {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const context = canvas.getContext('2d', { willReadFrequently: true });
+                if (!context) { return null; }
+                context.drawImage(source, 0, 0, canvas.width, canvas.height);
+                return getWeightedPalette(context.getImageData(0, 0, canvas.width, canvas.height));
+            } catch (error) {
+                console.debug('[WP colors] Visual sampling unavailable:', error);
+                return null;
+            }
+        }
+
+        async function sampleWallpaperPreview() {
+            const candidates = ['/preview.jpg', '/preview.png', '/preview.jpeg', '/preview.webp'];
+            try {
+                const projectResponse = await fetch(SERVER_ROOT + '/project.json', { cache: 'no-store' });
+                if (projectResponse.ok) {
+                    const project = await projectResponse.json();
+                    if (project && typeof project.preview === 'string' && project.preview.trim()) {
+                        candidates.unshift('/' + project.preview.replace(/^[/\\\\]+/, ''));
+                    }
+                }
+            } catch (error) {
+                // Custom wallpapers do not need a project.json file.
+            }
+            for (const candidate of candidates) {
+                try {
+                    const response = await fetch(SERVER_ROOT + candidate, { cache: 'no-store' });
+                    if (!response.ok) { continue; }
+                    const bitmap = await createImageBitmap(await response.blob());
+                    const palette = sampleVisual(bitmap);
+                    bitmap.close();
+                    if (palette) { return palette; }
+                } catch (error) {
+                    // Try the next conventional preview name.
+                }
+            }
+            return null;
+        }
+
+        function applyAdaptivePalette(palette, strength, navMul, topMul) {
+            const root = document.documentElement;
+            const rawLuminance = (0.2126 * palette.r + 0.7152 * palette.g + 0.0722 * palette.b) / 255;
+            const scale = rawLuminance > 0.62 ? 0.58 : rawLuminance < 0.12 ? 1.32 : 0.82;
+            const r = clampColor(palette.r * scale);
+            const g = clampColor(palette.g * scale);
+            const b = clampColor(palette.b * scale);
+            const amount = Math.max(0, Math.min(1, Number(strength)));
+            // Per-region transparency multipliers (0-1). When the user dials a region toward fully
+            // transparent, the adaptive tint on that region fades in step instead of overriding it.
+            const navFactor = (typeof navMul === 'number' && isFinite(navMul)) ? Math.max(0, Math.min(1, navMul)) : 1;
+            const topFactor = (typeof topMul === 'number' && isFinite(topMul)) ? Math.max(0, Math.min(1, topMul)) : 1;
+
+            // The nav/top surfaces render the tint over a dark workbench at partial alpha, so the
+            // effective backdrop sits between the workbench base (~#1e1e1e) and the tint. Approximate
+            // the strongest (most opaque) layer we emit so text contrast is judged against the worst case.
+            const navAlpha = (0.24 + amount * 0.46) * navFactor;
+            const topAlpha = (0.18 + amount * 0.38) * topFactor;
+            const activeAlpha = (0.18 + amount * 0.32) * navFactor;
+            const borderAlpha = (0.18 + amount * 0.26) * navFactor;
+            const baseGray = 30; // VS Code dark workbench background channel value.
+            const effR = clampColor(r * navAlpha + baseGray * (1 - navAlpha));
+            const effG = clampColor(g * navAlpha + baseGray * (1 - navAlpha));
+            const effB = clampColor(b * navAlpha + baseGray * (1 - navAlpha));
+            const bgLuminance = relativeLuminance(effR, effG, effB);
+
+            // Pick whichever of white/near-black text keeps the higher contrast ratio, then verify it
+            // clears the WCAG AA threshold (4.5:1). If neither does, push the background darker/lighter.
+            const whiteLum = relativeLuminance(255, 255, 255);
+            const blackLum = relativeLuminance(20, 23, 32);
+            let useLightText = contrastRatio(bgLuminance, whiteLum) >= contrastRatio(bgLuminance, blackLum);
+            let foreground = useLightText ? 'rgba(255, 255, 255, 0.96)' : 'rgba(15, 18, 26, 0.96)';
+
+            // Accent (active/hover) tint: nudge toward the text side so selected rows stay legible too.
+            const mixTarget = useLightText ? 255 : 0;
+            const accentR = clampColor(r * 0.72 + mixTarget * 0.28);
+            const accentG = clampColor(g * 0.72 + mixTarget * 0.28);
+            const accentB = clampColor(b * 0.72 + mixTarget * 0.28);
+
+            root.dataset.vweAdaptiveColors = 'true';
+            root.style.setProperty('--vwe-adaptive-nav-bg', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + navAlpha.toFixed(3) + ')');
+            root.style.setProperty('--vwe-adaptive-top-bg', 'rgba(' + r + ', ' + g + ', ' + b + ', ' + topAlpha.toFixed(3) + ')');
+            root.style.setProperty('--vwe-adaptive-active-bg', 'rgba(' + accentR + ', ' + accentG + ', ' + accentB + ', ' + activeAlpha.toFixed(3) + ')');
+            root.style.setProperty('--vwe-adaptive-border', 'rgba(' + accentR + ', ' + accentG + ', ' + accentB + ', ' + borderAlpha.toFixed(3) + ')');
+            root.style.setProperty('--vwe-adaptive-fg', foreground);
+            // Text shadow opposite the text color lifts glyphs off the busy wallpaper behind the tint.
+            root.style.setProperty('--vwe-adaptive-fg-shadow', useLightText ? 'rgba(0, 0, 0, 0.55)' : 'rgba(255, 255, 255, 0.5)');
+        }
+
+        function clearAdaptivePalette() {
+            const root = document.documentElement;
+            delete root.dataset.vweAdaptiveColors;
+            for (const property of ['--vwe-adaptive-nav-bg', '--vwe-adaptive-top-bg', '--vwe-adaptive-active-bg', '--vwe-adaptive-border', '--vwe-adaptive-fg', '--vwe-adaptive-fg-shadow']) {
+                root.style.removeProperty(property);
+            }
+        }
+
+        async function refreshAdaptivePalette(config) {
+            const request = ++adaptiveColorRequest;
+            if (!config || !config.adaptiveColorsEnabled) {
+                clearAdaptivePalette();
+                return;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 420));
+            if (request !== adaptiveColorRequest) { return; }
+
+            let palette = null;
+            if (typeof el !== 'undefined' && el) {
+                if (el.tagName === 'IMG' && el.complete && el.naturalWidth > 0) {
+                    palette = sampleVisual(el);
+                } else if (el.tagName === 'VIDEO' && el.readyState >= 2) {
+                    palette = sampleVisual(el);
+                }
+            }
+            if (!palette) { palette = await sampleWallpaperPreview(); }
+            if (request !== adaptiveColorRequest) { return; }
+            if (palette) {
+                const respect = config.adaptiveColorsRespectTransparency !== false;
+                const navMul = respect && typeof config.adaptiveNavAlpha === 'number' ? config.adaptiveNavAlpha : 1;
+                const topMul = respect && typeof config.adaptiveTopAlpha === 'number' ? config.adaptiveTopAlpha : 1;
+                applyAdaptivePalette(palette, config.adaptiveColorsStrength, navMul, topMul);
+            } else {
+                clearAdaptivePalette();
+            }
+        }
+
         async function updateCss() {
             try {
                 console.log("[WP style inj] Fetching config from " + CONFIG_URL);
                 const res = await fetch(CONFIG_URL);
                 if (res.ok) {
                     const config = await res.json();
+                    lastRuntimeConfig = config;
                     console.log("[WP style inj] Got config:", config);
                     if (typeof config.interaction === 'boolean') {
                         weInteractionEnabled = config.interaction;
@@ -695,6 +925,7 @@ const jsInjection = `
                     } else {
                         console.log("[WP style inj] CSS is identical, skipping update.");
                     }
+                    void refreshAdaptivePalette(config);
                 } else {
                     console.error("[WP style inj] Fetch failed status:", res.status);
                 }
@@ -841,6 +1072,12 @@ const jsInjection = `
         let el;
         ${elementCreationCode}
 
+        if (el.tagName === 'IMG') {
+            el.addEventListener('load', function() { if (lastRuntimeConfig) { void refreshAdaptivePalette(lastRuntimeConfig); } });
+        } else if (el.tagName === 'VIDEO') {
+            el.addEventListener('loadeddata', function() { if (lastRuntimeConfig) { void refreshAdaptivePalette(lastRuntimeConfig); } });
+        }
+
         el.style.width = '100%';
         el.style.height = '100%';
         el.style.objectFit = '${wallpaperFit}';
@@ -854,6 +1091,34 @@ const jsInjection = `
         wrapper.appendChild(el);
         container.appendChild(wrapper);
         document.body.appendChild(container);
+
+        // [Persistence] VS Code 1.133 rebuilds the workbench DOM into <body> after our
+        // injection runs at parse time, which detaches the wallpaper container (it flashes
+        // once on startup then vanishes). Re-append the EXISTING container node whenever it
+        // leaves <body> — reusing the node keeps the <video>/<iframe> playing so there is no
+        // reload flicker. Guarded so only one observer is ever installed.
+        if (!window.__vweReattachObserver) {
+            const reattach = function() {
+                if (!document.body) { return; }
+                if (container.parentNode !== document.body) {
+                    document.body.appendChild(container);
+                }
+                container.style.opacity = '1';
+                container.style.display = 'flex';
+            };
+            // Observe the whole document (subtree) rather than document.body's direct
+            // children only: VS Code 1.133 can replace the entire <body> node during a late
+            // render pass, which would orphan an observer bound to the old body and let the
+            // container "flash then vanish". Binding to documentElement survives body swaps.
+            const observer = new MutationObserver(function() {
+                if (!document.body || !document.body.contains(container)) { reattach(); }
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+            window.__vweReattachObserver = observer;
+            // The workbench performs several async render passes after first paint; re-check
+            // across the first few seconds to survive whichever pass drops our node.
+            [150, 500, 1200, 2500, 5000, 8000].forEach(function(delay) { setTimeout(reattach, delay); });
+        }
 
         // Resize handler: Reload iframe on window resize
         if (el.tagName === 'IFRAME') {
@@ -931,30 +1196,35 @@ const jsInjection = `
         }
 
         const injectionTargets = new Set(injectionJsPaths.map(p => path.normalize(p)));
+        let changed = false;
         for (const jsPath of cleanupJsPaths) {
-            let raw = fs.readFileSync(jsPath, 'utf-8');
-            const cleaned = raw.replace(JS_INJECTION_REGEX, '');
+            const raw = fs.readFileSync(jsPath, 'utf-8');
             const normalized = path.normalize(jsPath);
-            if (injectionTargets.has(normalized)) {
-                await saveFilePrivileged(jsPath, cleaned + jsInjection);
-            } else if (cleaned !== raw) {
-                await saveFilePrivileged(jsPath, cleaned);
+            const updated = updateWorkbenchJsContent(raw, jsInjection, injectionTargets.has(normalized));
+            if (updated !== raw) {
+                await saveFilePrivileged(jsPath, updated);
+                changed = true;
             }
         }
+        return changed;
     } catch (e) {
         throw new Error(`JS 注入失败: ${e}`);
     }
 }
 
-export async function performInjection(mediaPath: string, type: WallpaperType, opacity: number, port: number, customJs: string, resizeDelay: number, startupCheckInterval: number, autoRestart = true, showDebugSidebar = false, wallpaperFit: 'contain' | 'cover' | 'fill' = 'contain', interactionEnabled = true) {
+export async function performInjection(mediaPath: string, type: WallpaperType, opacity: number, port: number, customJs: string, resizeDelay: number, startupCheckInterval: number, autoRestart = true, showDebugSidebar = false, wallpaperFit: 'contain' | 'cover' | 'fill' = 'contain', interactionEnabled = true): Promise<boolean> {
     try {
         await patchWorkbenchHtml();
         await patchIntegrityWarning();
-        await injectJs(mediaPath, type, opacity, port, customJs, resizeDelay, startupCheckInterval, showDebugSidebar, wallpaperFit, interactionEnabled);
+        const injectionChanged = await injectJs(mediaPath, type, opacity, port, customJs, resizeDelay, startupCheckInterval, showDebugSidebar, wallpaperFit, interactionEnabled);
         const syncedChecksumKeys = await syncProductChecksums();
         if (syncedChecksumKeys.length > 0) {
-            await showFullRestartMessage('已安装壁纸并同步 VS Code 校验');
-            return;
+            if (autoRestart) {
+                await showFullRestartMessage('已安装壁纸并同步 VS Code 校验');
+            } else {
+                vscode.window.setStatusBarMessage('Live Wallpaper checksums updated. Reload required.', 5000);
+            }
+            return injectionChanged;
         }
         
         if (autoRestart) {
@@ -962,8 +1232,10 @@ export async function performInjection(mediaPath: string, type: WallpaperType, o
             vscode.window.setStatusBarMessage('Wallpaper installed. Restarting...', 5000);
             await vscode.commands.executeCommand('workbench.action.reloadWindow');
         }
+        return injectionChanged;
     } catch (error: any) {
         vscode.window.showErrorMessage(error.message || String(error));
+        return false;
     }
 }
 

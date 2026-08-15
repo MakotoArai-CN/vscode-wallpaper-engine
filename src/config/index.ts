@@ -16,6 +16,7 @@ export interface AppConfig {
     audioSource: AudioSource;
     interactionEnabled: boolean;
     glass: GlassConfig;
+    adaptiveColors: AdaptiveColorConfig;
 }
 
 export type GlassPreset = 'subtle' | 'liquid' | 'solid';
@@ -31,6 +32,18 @@ export interface GlassConfig {
     saturation: number;
     borderOpacity: number;
     shadowOpacity: number;
+}
+
+export interface AdaptiveColorConfig {
+    enabled: boolean;
+    strength: number;
+    // When true, the adaptive tint alpha for each chrome region is multiplied by that region's
+    // transparency-rule alpha, so the two features stack instead of the tint overriding transparency.
+    respectTransparency: boolean;
+    // Precomputed 0-1 multipliers derived from the transparency rules for the nav/top regions.
+    // 1 means "no reduction" (rule absent, transparency disabled, or respectTransparency off).
+    navAlpha: number;
+    topAlpha: number;
 }
 
 const GLASS_PRESETS: Record<GlassPreset, GlassConfig> = {
@@ -126,6 +139,144 @@ export function buildGlassCss(glass: GlassConfig): string {
     --vwe-glass-saturation: ${glass.saturation};
     --vwe-glass-radius: ${radius}px;
     --vwe-glass-filter: blur(var(--vwe-glass-blur)) contrast(1.14) brightness(1.04) saturate(var(--vwe-glass-saturation));
+    --vwe-adaptive-nav-bg: var(--vwe-glass-bg);
+    --vwe-adaptive-top-bg: var(--vwe-glass-bg);
+    --vwe-adaptive-active-bg: var(--vwe-glass-focus);
+    --vwe-adaptive-border: var(--vwe-glass-border);
+    --vwe-adaptive-fg: var(--vscode-foreground);
+    --vwe-adaptive-fg-shadow: rgba(0, 0, 0, 0.45);
+}
+
+/* VS Code 1.133 Agent/Chat surfaces */
+.monaco-workbench .chat-viewpane,
+.monaco-workbench .part.auxiliarybar .pane.chat-viewpane-container,
+.monaco-workbench .chat-widget,
+.monaco-workbench .interactive-session,
+.monaco-workbench .agent-host-chat,
+.monaco-workbench .agent-sessions,
+.monaco-workbench .agent-sessions-container,
+.monaco-workbench .agent-sessions-viewer,
+.monaco-workbench .chat-editor-container,
+.monaco-workbench .chat-editing-session-container,
+.monaco-workbench .chat-viewpane .monaco-list,
+.monaco-workbench .chat-widget .monaco-list,
+.monaco-workbench .agent-sessions .monaco-list {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.monaco-workbench .chat-viewpane-container .prompt-timeline-sticky-band,
+.monaco-workbench .chat-input-container .monaco-editor,
+.monaco-workbench .chat-input-container .monaco-editor-background,
+.monaco-workbench .chat-input-container .margin {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.monaco-workbench .chat-widget .monaco-inputbox,
+.monaco-workbench .interactive-session .monaco-inputbox,
+.monaco-workbench .agent-host-chat .monaco-inputbox,
+.monaco-workbench .agent-sessions-control-container,
+.monaco-workbench .agent-sessions-new-button-container,
+.monaco-workbench .chat-editing-session-overview,
+.monaco-workbench .chat-input-container,
+.monaco-workbench .chat-input-window {
+    background: var(--vwe-glass-bg-static) !important;
+    background-color: var(--vwe-glass-bg-static) !important;
+    border-color: var(--vwe-glass-border) !important;
+    -webkit-backdrop-filter: var(--vwe-glass-filter) !important;
+    backdrop-filter: var(--vwe-glass-filter) !important;
+}
+
+/* Wallpaper-weighted navigation and top chrome */
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar {
+    background: var(--vwe-adaptive-nav-bg) !important;
+    background-color: var(--vwe-adaptive-nav-bg) !important;
+    border-color: var(--vwe-adaptive-border) !important;
+    -webkit-backdrop-filter: var(--vwe-glass-filter) !important;
+    backdrop-filter: var(--vwe-glass-filter) !important;
+}
+
+/* Native pane layers are opaque in VS Code 1.133 and otherwise hide the adaptive parent color. */
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .composite.title,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .pane,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .pane-header,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .monaco-list,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .monaco-list-rows,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .composite.title,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .pane,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .pane-header,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .monaco-list,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .monaco-list-rows {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.titlebar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .titlebar-container,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar {
+    background: var(--vwe-adaptive-top-bg) !important;
+    background-color: var(--vwe-adaptive-top-bg) !important;
+    border-color: var(--vwe-adaptive-border) !important;
+    -webkit-backdrop-filter: var(--vwe-glass-filter) !important;
+    backdrop-filter: var(--vwe-glass-filter) !important;
+}
+
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar .action-item.checked,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar .action-item:hover,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar .menubar-menu-button:hover,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar .menubar-menu-button.open {
+    background: var(--vwe-adaptive-active-bg) !important;
+}
+
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.titlebar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .monaco-list-row,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .monaco-list-row,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .pane-header .title,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .pane-header .title,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .monaco-icon-label,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .monaco-icon-label,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .monaco-icon-label .label-name,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .monaco-icon-label .label-name {
+    color: var(--vwe-adaptive-fg) !important;
+    text-shadow: 0 1px 2px var(--vwe-adaptive-fg-shadow) !important;
+}
+
+/*
+ * Activity-bar icons and title/menu-bar action glyphs are painted by VS Code's own theme rules on
+ * the .action-label/.codicon elements, which are more specific than the .part container above and
+ * therefore keep their dim default color (e.g. activityBar.inactiveForeground). Target those leaf
+ * elements directly so the wallpaper-adaptive foreground actually reaches the left icon strip, the
+ * menu-bar text, and the title-bar global actions (sync/command-center) the user flagged as unreadable.
+ */
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar .monaco-action-bar .action-label,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar .monaco-action-bar .action-label.codicon,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar .action-item .action-label,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.activitybar .action-item .codicon,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.titlebar .action-item .action-label,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.titlebar .action-item .codicon,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.titlebar .monaco-icon-label,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.titlebar .command-center-center,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar .menubar-menu-button,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .menubar .menubar-menu-button .menubar-menu-title {
+    color: var(--vwe-adaptive-fg) !important;
+    text-shadow: 0 1px 2px var(--vwe-adaptive-fg-shadow) !important;
+    opacity: 1 !important;
+}
+
+/* Selected/active rows in the nav lists must keep the same readable foreground. */
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .monaco-list-row.focused,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.sidebar .monaco-list-row.selected,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .monaco-list-row.focused,
+:root[data-vwe-adaptive-colors="true"] .monaco-workbench .part.auxiliarybar .monaco-list-row.selected {
+    background: var(--vwe-adaptive-active-bg) !important;
+    background-color: var(--vwe-adaptive-active-bg) !important;
 }
 
 .quick-input-widget,
@@ -254,8 +405,26 @@ export function getConfiguration(): AppConfig {
     const audioSource = config.get<AudioSource>('audioSource') || 'system';
     const interactionEnabled = config.get<boolean>('interactionEnabled') ?? true;
     const glass = getGlassConfiguration(config);
+    const respectTransparency = config.get<boolean>('adaptiveColorsRespectTransparency') ?? true;
+    const transparencyEnabled = config.get<boolean>('transparencyEnabled') ?? true;
+    const transparencyRules = config.get<{ [key: string]: number }>('transparencyRules') || {};
+    const ruleMultiplier = (key: string): number => {
+        if (!respectTransparency || !transparencyEnabled) { return 1; }
+        const value = transparencyRules[key];
+        if (typeof value !== 'number') { return 1; }
+        return clamp(value, 0, 1);
+    };
+    const adaptiveColors: AdaptiveColorConfig = {
+        enabled: config.get<boolean>('adaptiveColorsEnabled') ?? true,
+        strength: clamp(config.get<number>('adaptiveColorsStrength') ?? 0.68, 0, 1),
+        respectTransparency,
+        // Left nav (activitybar/sidebar/auxiliarybar) tracks sideBar.background; top chrome
+        // (titlebar/menubar) tracks titleBar.activeBackground.
+        navAlpha: ruleMultiplier('sideBar.background'),
+        topAlpha: ruleMultiplier('titleBar.activeBackground')
+    };
 
-    return { workshopPath, opacity, serverPort, customJs, wallpaperId, resizeDelay, startupCheckInterval, customCss, customWallpaperPaths, wallpaperFit, showUnsupportedWallpapers, audioSource, interactionEnabled, glass };
+    return { workshopPath, opacity, serverPort, customJs, wallpaperId, resizeDelay, startupCheckInterval, customCss, customWallpaperPaths, wallpaperFit, showUnsupportedWallpapers, audioSource, interactionEnabled, glass, adaptiveColors };
 }
 
 export function validateConfig(config: AppConfig): boolean {

@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { resolveWorkbenchPaths } from '../core/injector';
+import { resolveWorkbenchPaths, updateWorkbenchJsContent } from '../core/injector';
 
 suite('Injector Test Suite', () => {
     let tempDir: string;
@@ -41,7 +41,7 @@ suite('Injector Test Suite', () => {
         assert.ok(paths.integrityPatchJsPaths.map(path.normalize).includes(sessionsJsPath));
     });
 
-    test('resolveWorkbenchPaths should support the VS Code 1.132 stable layout', () => {
+    test('resolveWorkbenchPaths should support the VS Code 1.133 stable layout', () => {
         const htmlPath = writeAppFile('out/vs/code/electron-browser/workbench/workbench.html');
         const loaderJsPath = writeAppFile('out/vs/code/electron-browser/workbench/workbench.js');
         const mainJsPath = writeAppFile('out/vs/workbench/workbench.desktop.main.js');
@@ -54,5 +54,15 @@ suite('Injector Test Suite', () => {
         assert.ok(paths.mainJsPaths.map(path.normalize).includes(mainJsPath));
         assert.ok(paths.integrityPatchJsPaths.map(path.normalize).includes(mainJsPath));
         assert.ok(paths.integrityPatchJsPaths.map(path.normalize).includes(sessionsJsPath));
+    });
+
+    test('updateWorkbenchJsContent should be idempotent', () => {
+        const injection = '\n/* [VSCode-Wallpaper-Injection-Start] */\nnew();\n/* [VSCode-Wallpaper-Injection-End] */';
+        const first = updateWorkbenchJsContent('workbench();', injection, true);
+        const second = updateWorkbenchJsContent(first, injection, true);
+
+        assert.strictEqual(first, 'workbench();' + injection);
+        assert.strictEqual(second, first);
+        assert.strictEqual(updateWorkbenchJsContent(first, injection, false), 'workbench();');
     });
 });
